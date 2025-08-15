@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <!--
+  © 2025-present LoserXxh. All rights reserved.
+  © 2025-present LoserXxh. 保留所有权利。
+  -->
+  <title>PeasWave</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      -webkit-user-drag: none;
+      touch-action: none; 
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #1c1c1c;
+      -webkit-user-drag: none;
+      -webkit-user-select: none; /* Safari */
+      -moz-user-select: none;    /* Firefox */
+      -ms-user-select: none;     /* IE10+ */
+      user-select: none;         /* 标准 */
+
+    }
+    canvas {
+      border: 5px solid #b3b3b3;
+      background-color: #fff; /*#fff,#*/
+
+      transition: background-color 0.8s ease, border-color 0.8s ease;
+    }
+    .rocker {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: rgb(64, 64, 64);
+      opacity: 0;
+      position: fixed;
+      bottom: 40px;
+      left: 40px;
+      /*overflow: hidden;*/
+      touch-action: none;
+      -webkit-user-drag: none;
+
+      transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="640" height="360"></canvas>
+  <div id="rocker" class="rocker">
+  </div>
+  <script>
+    GameVersion = "Beta v0.03"
+
+    //canvas
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    //键盘检测
+    var wDing = false, aDing = false, sDing = false, dDing = false;
+    document.addEventListener('keydown', (event) => {
+      if (event.key === "w") {
+        wDing = true;
+      } else if (event.key === "a") {
+        aDing = true;
+      } else if (event.key === "s") {
+        sDing = true;
+      } else if (event.key === "d") {
+        dDing = true;
+      };
+    });
+    document.addEventListener('keyup', (event) => {
+      if (event.key === "w") {
+        wDing = false;
+      } else if (event.key === "a") {
+        aDing = false;
+      } else if (event.key === "s") {
+        sDing = false;
+      } else if (event.key === "d") {
+      dDing = false;
+      };
+    });
+
+    //摇杆控制移动方向
+    const rocker = document.getElementById('rocker');
+    var rockerRect = rocker.getBoundingClientRect();
+    var rockerCenter = {
+      x: rockerRect.left + rockerRect.width / 2,
+      y: rockerRect.top + rockerRect.height / 2
+    };
+
+    function updateRockerCenter() {
+      rockerRect = rocker.getBoundingClientRect();
+      rockerCenter = {
+        x: rockerRect.left + rockerRect.width / 2,
+        y: rockerRect.top + rockerRect.height / 2
+      };
+    }
+
+    let isDragging = false;
+    var mouse;
+    var joyStickCenterDistance=0;
+    var deltaX=0;
+    var deltaY=0;
+    var joyStickRotation=0;
+    var joiStickControlPlayerSpeed=1;
+    function joyStick() {
+      deltaX = mouse.clientX - rockerCenter.x;
+      deltaY = mouse.clientY - rockerCenter.y;
+      joyStickRotation = Math.atan2(deltaY, deltaX) * 180 / Math.PI + 90;
+      joyStickCenterDistance = Math.hypot(deltaX, deltaY);
+      joiStickControlPlayerSpeed = joyStickCenterDistance / 40;
+    }
+    function moveJoyStick() {
+      rocker.style.left = (mouse.clientX - rocker.offsetWidth / 2) + "px" 
+      rocker.style.top = (mouse.clientY - rocker.offsetHeight / 2) + "px"
+    }
+
+    //摇杆事件检查
+    document.addEventListener('pointerdown', (event) => {
+      rocker.style.transition = "none";
+      rocker.style.opacity = 0.3;
+      isDragging = true;
+      mouse = event;
+      moveJoyStick()
+      updateRockerCenter()
+      joyStick()
+    });
+    document.addEventListener('pointermove', (event) => {
+      mouse = event;
+      joyStick()
+    });
+    //document.addEventListener('pointerup', () => {
+    //  isDragging = false;
+    //  rocker.style.transition = "opacity 0.3s ease";
+    //  rocker.style.opacity = 0;
+    //});
+    document.addEventListener('pointerup', stopDragging);
+    document.addEventListener('pointercancel', stopDragging);
+
+    function stopDragging() {
+      isDragging = false;
+      rocker.style.transition = "opacity 0.3s ease";
+      rocker.style.opacity = 0;
+    }
+
+
+    //大粪计算之键盘方向，爱来自2024/8/27之前
+    var moveRad = 0;
+    function settlementMoves() {
+      if (wDing === true && aDing !== true && sDing !== true && dDing !== true) {
+        moveRad = 1;
+      } else if (wDing !== true && aDing === true && sDing !== true && dDing !== true) {
+        moveRad = 7;
+      } else if (wDing !== true && aDing !== true && sDing === true && dDing !== true) {
+        moveRad = 5;
+      } else if (wDing !== true && aDing !== true && sDing !== true && dDing === true) {
+        moveRad = 3;
+      } else if (wDing === true && aDing !== true && sDing !== true && dDing === true) {
+        moveRad = 2;
+      } else if (wDing !== true && aDing !== true && sDing === true && dDing === true) {
+        moveRad = 4;
+      } else if (wDing !== true && aDing === true && sDing === true && dDing !== true) {
+        moveRad = 6;
+      } else if (wDing === true && aDing === true && sDing !== true && dDing !== true) {
+        moveRad = 8;
+      } else if (wDing === true && aDing === true && sDing !== true && dDing === true) {
+        moveRad = 1;
+      } else if (wDing === true && aDing !== true && sDing === true && dDing === true) {
+        moveRad = 3;
+      } else if (wDing !== true && aDing === true && sDing === true && dDing === true) {
+        moveRad = 5;
+      } else if (wDing === true && aDing === true && sDing === true && dDing !== true) {
+        moveRad = 7;
+      } else {
+        moveRad = 0
+      };
+    };
+
+
+    //打印文字
+    function DrawUbuntu(text,x,y,px=12,strokeColor="#000000",fillColor="#ffffff",drawAlpha=1) {
+      ctx.beginPath();
+      ctx.globalAlpha = drawAlpha;
+      ctx.font = "bold " + px + "px" + " Ubuntu";
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = px / 10;
+      ctx.lineJoin = "round";
+      ctx.strokeText(text, x, y);
+      ctx.fillStyle = fillColor;
+      ctx.fillText(text, x, y);
+    }
+
+    //Debug
+    var DebugDrawing = false;
+    function debugDraw() {
+      if (DebugDrawing == true) {
+        DrawUbuntu("PeasWave " + GameVersion + " by LoserXxh",5,15,12,"#000000","#ffffff");
+        DrawUbuntu("Debug",5,35,12,"#000000","#ffffff");
+        DrawUbuntu("Keyboard: W=" + wDing + ", A=" + aDing + ", S=" + sDing + ", D=" + dDing,5,50,12,"#000000","#ffffff");
+        DrawUbuntu("JoystickDraging: " + isDragging,5,65,12,"#000000","#ffffff");
+        DrawUbuntu("JoystickRotation: " + joyStickRotation.toFixed(2),5,80,12,"#000000","#ffffff");
+        DrawUbuntu("JoystickDistance: " + joyStickCenterDistance.toFixed(2),5,95,12,"#000000","#ffffff");
+        DrawUbuntu("JoystickControlPlayerSpeed: " + joiStickControlPlayerSpeed.toFixed(2),5,110,12,"#000000","#ffffff");
+      };
+    };
+    var EntityDataDrawing = false;
+    function drawEntityData() {
+      if (EntityDataDrawing == true) {
+        for (let i = 0; i < entities.length; i++) {
+          const entity = entities[i];
+          if (entity instanceof bullet) {continue}
+          var drawX = entities[i].position.x, drawY=entities[i].position.y
+
+          const prints = [
+            `${entity.constructor.name}`,
+            `reload: ${entity.weapon.reloading}`,
+            `Position: ${entity.position.x.toFixed(2)},${entity.position.y.toFixed(2)}`,
+            `Vector: ${entity.vector ? `${entity.vector.x.toFixed(2)},${entity.vector.y.toFixed(2)}` : "N/A"}`,
+            `Acceleration: ${entity.data.accSpeed ? `${entity.data.accSpeed}` : "N/A"}`,
+            `Deceleration: ${entity.data.decSpeed ? `${entity.data.decSpeed}` : "N/A"}`,
+            `Moving: ${entity.data?.moving ?? 'N/A'}`,
+            `Rotation: ${entity.data.rotation.toFixed(2)}`,
+            `Mass: ${entity.data?.mass ?? 'N/A'}`,
+            `Knockback: ${entity.data.extraKnockback}`,
+            `AI: ${!entity.AI || entity.AI.length === 0 ? 'N/A' : entity.AI}`
+          ]
+
+          for (let j = 0; j < prints.length; j++) {
+            DrawUbuntu(prints[j],drawX,drawY+j*15)
+          }
+
+        };
+      }
+    };
+
+    //受伤效果颜色计算
+      function getWhitenedColor(originalColor, amount) {
+        if (!originalColor) return "#ffffff";
+        
+        // 解析原始颜色
+        const r = parseInt(originalColor.substr(1,2), 16);
+        const g = parseInt(originalColor.substr(3,2), 16);
+        const b = parseInt(originalColor.substr(5,2), 16);
+
+        //浮动
+        amountFloating = amount * (Math.random()*0.4+0.6);
+        //if (amountFloating > 1) {amountFloating = 1}; //限制
+        amount = amountFloating;
+        
+        // 计算变白后的颜色（与白色混合）
+        const whitenedR = Math.round(r + (255 - r) * amount);
+        const whitenedG = Math.round(g + (255 - g) * amount);
+        const whitenedB = Math.round(b + (255 - b) * amount);
+        
+        return `#${whitenedR.toString(16).padStart(2,'0')}${whitenedG.toString(16).padStart(2,'0')}${whitenedB.toString(16).padStart(2,'0')}`;
+      }
+
+
+    //class
+    class position {
+      constructor(x=0,y=0) {
+        this.x = x;
+        this.y = y;
+      }
+    };
+    class vector {
+      constructor(x=0,y=0) {
+        this.x = x;
+        this.y = y;
+      }
+    };
+    class style {
+      constructor(shape=0,color="#999999",borderColor="#767676",damageEffect=0) {
+        this.shape = shape;
+        this.color = color;
+        this.borderColor = borderColor;
+        this.damageEffect = damageEffect
+      }
+    };
+    class data {
+      constructor(r,rotation=0,moving=false,speed,accSpeed,decSpeed,extraKnockback=0,team,mass=1,moveRate=1,h) {  // 新增extraKnockback属性，默认0
+        this.r = r;
+        this.rotation = rotation;
+        this.moving = moving;
+        this.speed = speed;
+        this.accSpeed = accSpeed;
+        this.decSpeed = decSpeed;
+        this.beCollided = "";
+        this.extraKnockback = extraKnockback;
+        this.team = team;
+        this.moveRate = moveRate;
+        this.mass = mass;
+      }
+    }
+
+    //实体类
+    class entity {
+      constructor(x,y,shape,color,borderColor,r,rotation,extraKnockback = 0,team,damage=0,maxHealth=Infinity,health=1,heal,weapon=[]) {
+        this.position = new position(x,y);
+        this.style = new style(shape,color,borderColor);
+        this.data = new data(r,rotation);
+        this.data.extraKnockback = extraKnockback;
+        this.data.team = team;
+        this.data.damage = damage;
+        this.data.maxHealth = maxHealth;
+        this.data.health = health;
+        this.data.heal = heal;
+        this.style.redHealthBar = health;
+        this.style.redHealthBarTime = 0;
+        this.isDying = false; //哎你怎么似了
+        this.deathTimer = 0; // 死亡动画计时器
+        this.style.originalR = r; //原半径
+        this.style.deathDuration = 100; // 死亡动画持续时间
+        this.style.opacity = 1; // 透明度（1为不透明）
+        this.weapon = [...weapon]; //[0攻击类型,1子弹伤害,2子弹血量,3冷却,4距离,5弹速,6子弹大小,7子弹重量,8生成数量,9子弹携带武器]
+        this.weapon.shootAngle = 0;
+        this.weapon.attacking = false;
+        this.weapon.reloading = 0 + this.weapon[3] * 0.5;
+        this.weapon.lastReloadTime = Date.now();
+      }
+
+      UseWeapon() { //武器!
+        if (this.weapon.reloading > 0) {this.weapon.reloading -= targetDelta} //武器填装
+        //if (this.weapon.reloading > 0) {this.weapon.reloading -= Date.now()-this.weapon.lastReloadTime} //武器填装
+        //this.weapon.lastReloadTime=Date.now()
+        if (this.weapon[0] != undefined && this.weapon.attacking == true) {
+          if (this.weapon.reloading <= 0) {
+
+
+            var teamType
+            var bulletCollision, spawnCollision;
+            if (this.data.team == 1) {teamType = "player"} else {teamType = "enemy"}
+            if (teamType == "player") {bulletCollision = playerBulletCollision; spawnCollision = playerSpawnCollision}; //关于子弹、召唤物的碰撞
+            if (teamType == "enemy") {bulletCollision = enemyBulletCollision; spawnCollision = enemySpawnCollision};
+
+
+
+            if (this.weapon[0] == "Basic") { //basic
+
+              const bulletTime = this.weapon[4] / this.weapon[5] * targetDelta; //basic的子弹存在时间
+
+              SpawnEntities({ClassType:teamType+"Bullet",x:this.position.x,y:this.position.y,rotation:this.weapon.shootAngle,shape:0,color:this.style.color,borderColor:this.style.borderColor,r:this.weapon[6],speed:this.weapon[5],accSpeed:0.3,decSpeed:0.85,beCollided:bulletCollision,team:this.data.team,AI:["normal"],damage:this.weapon[1],maxHealth:this.weapon[2],mass:this.weapon[7],existenceTime:bulletTime})//这是一个射弹
+              this.weapon.reloading += this.weapon[3] //赋予冷却时间
+            }
+            else if (this.weapon[0] == "TripleShot") { //penta
+
+              const bulletTime = this.weapon[4] / this.weapon[5] * targetDelta; //子弹存在时间
+              const speed = this.weapon[5] //penta子弹速度
+
+              function pentaBullet(shotRota,speed,x,y,r,mass,damage,health,color,borderColor,team,collision) {SpawnEntities({ClassType:teamType+"Bullet", x:x, y:y, rotation:shotRota, shape:0, color:color, borderColor:borderColor, r:r, speed:speed, accSpeed:0.3, decSpeed:0.85, beCollided:collision, team:team, AI:["normal"], damage:damage, maxHealth:health, mass:0.5, existenceTime:bulletTime})}//这是一个射弹的函数
+              pentaBullet(this.weapon.shootAngle,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle+25,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle-25,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              this.weapon.reloading += this.weapon[3] //赋予冷却时间
+            }
+            else if (this.weapon[0] == "PentaShot") { //penta
+
+              const bulletTime = this.weapon[4] / this.weapon[5] * targetDelta; //PentaShot的子弹存在时间
+              const speed = this.weapon[5] //penta子弹速度
+
+              function pentaBullet(shotRota,speed,x,y,r,mass,damage,health,color,borderColor,team,collision) {SpawnEntities({ClassType:teamType+"Bullet", x:x, y:y, rotation:shotRota, shape:0, color:color, borderColor:borderColor, r:r, speed:speed, accSpeed:0.3, decSpeed:0.85, beCollided:collision, team:team, AI:["normal"], damage:damage, maxHealth:health, mass:0.5, existenceTime:bulletTime})}//这是一个射弹的函数
+              pentaBullet(this.weapon.shootAngle,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle+25,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle-25,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle+50,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle-50,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              this.weapon.reloading += this.weapon[3] //赋予冷却时间
+            }
+            else if (this.weapon[0] == "HeptaShot") { //penta
+
+              const bulletTime = this.weapon[4] / this.weapon[5] * targetDelta *2; //子弹存在时间，wow，hepta是两倍
+              const speed = this.weapon[5] //penta子弹速度
+
+              function pentaBullet(shotRota,speed,x,y,r,mass,damage,health,color,borderColor,team,collision) {SpawnEntities({ClassType:teamType+"Bullet", x:x, y:y, rotation:shotRota, shape:0, color:color, borderColor:borderColor, r:r, speed:speed, accSpeed:0.3, decSpeed:0.85, beCollided:collision, team:team, AI:["normal"], damage:damage, maxHealth:health, mass:0.5, existenceTime:bulletTime})}//这是一个射弹的函数
+              pentaBullet(this.weapon.shootAngle,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle+20,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle-20,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle+40,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle-40,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle+60,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              pentaBullet(this.weapon.shootAngle-60,speed,this.position.x,this.position.y,this.weapon[6],this.weapon[7],this.weapon[1],this.weapon[2],this.style.color,this.style.borderColor,this.data.team,bulletCollision);
+              this.weapon.reloading += this.weapon[3] //赋予冷却时间
+            }
+            else if (this.weapon[0] == "Summoner") { ///////////////////////////WTF SUMONS AUGHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHASDAJGDZOFLPZKSF
+              var allSpawnQuantity = 0;
+              for (let i = 0; i < entities.length; i++) {
+                if (entities[i].spawnBy == this && entities[i].isDying == false) {allSpawnQuantity += 1};
+              };
+                if (allSpawnQuantity < this.weapon[8]) { //生成达到上限时不生成 
+                  SpawnEntities({ClassType:teamType+"Spawn",x:this.position.x,y:this.position.y,vectorX:(Math.random()*2-1)*this.weapon[5],vectorY:(Math.random()*2-1)*this.weapon[5],rotation:this.weapon.shootAngle,shape:2,color:this.style.color,borderColor:this.style.borderColor,r:this.weapon[6],speed:this.weapon[5],accSpeed:0.1,decSpeed:0.9,beCollided:spawnCollision,team:this.data.team,AI:"normalSpawn",damage:this.weapon[1],maxHealth:this.weapon[2],mass:this.weapon[7],existenceTime:Infinity,spawnBy:this})//这是一个召唤物
+                  this.weapon.reloading += this.weapon[3] //赋予冷却时间
+                }
+            }
+            else if (this.weapon[0] == "Stick") {
+              var allSpawnQuantity = 0;
+              for (let i = 0; i < entities.length; i++) {
+                if (entities[i].spawnBy == this && entities[i].isDying == false) {allSpawnQuantity += 1};
+              };
+                if (allSpawnQuantity < this.weapon[8]) { //生成达到上限时不生成 
+                  const spawnMoveSpeed = this.weapon[5]*0.5 + Math.random()*0.5*this.weapon[5]
+                  SpawnEntities({ClassType:teamType+"PenetrateSpawn",x:this.position.x,y:this.position.y,vectorX:(Math.random()*2-1)*this.weapon[5],vectorY:(Math.random()*2-1)*this.weapon[5],rotation:this.weapon.shootAngle,shape:4,color:this.style.color,borderColor:this.style.borderColor,r:this.weapon[6],speed:spawnMoveSpeed,accSpeed:0.05,decSpeed:0.95,beCollided:[],team:this.data.team,AI:"stickSpawn",damage:this.weapon[1],maxHealth:this.weapon[2],mass:this.weapon[7],spawnBy:this,existenceTime:this.weapon[9]})//这是一个召唤物
+                  this.weapon.reloading += this.weapon[3] //赋予冷却时间
+                }
+            }
+            else if (this.weapon[0] == "Tower") { //[9使用武器，10持续时间]
+              var allSpawnQuantity = 0;
+              for (let i = 0; i < entities.length; i++) {
+                if (entities[i].spawnBy == this && entities[i].isDying == false) {allSpawnQuantity += 1};
+              };
+                if (allSpawnQuantity < this.weapon[8]) { //生成达到上限时不生成 
+                  SpawnEntities({ClassType:teamType+"Spawn",x:this.position.x,y:this.position.y,vectorX:(Math.random()*2-1)*this.weapon[5],vectorY:(Math.random()*2-1)*this.weapon[5],rotation:this.weapon.shootAngle,shape:1,color:this.style.color,borderColor:this.style.borderColor,r:this.weapon[6],speed:this.weapon[5],accSpeed:0.1,decSpeed:0.6,beCollided:spawnCollision,team:this.data.team,AI:"towerSpawn",damage:this.weapon[1],maxHealth:this.weapon[2],mass:this.weapon[7],existenceTime:this.weapon[9],spawnBy:this,weapon:this.weapon[10]})//这是一个召唤物
+                  this.weapon.reloading += this.weapon[3] //赋予冷却时间
+                }
+            }
+            
+          }
+        }
+      }
+
+      DrawSelf(timeScale=0) {
+        var color = this.style.color, borderColor = this.style.borderColor;
+
+        // 保存画布状态（用于恢复透明度）
+        ctx.save();
+        // 应用当前透明度
+        ctx.globalAlpha = this.style.opacity;
+
+        if (this.style.shape == 0) { //圆
+
+          if (this.style.damageEffect != 0) {
+            color = getWhitenedColor(color, this.style.damageEffect)
+            borderColor = getWhitenedColor(borderColor, this.style.damageEffect)
+          }
+
+          ctx.beginPath();
+          ctx.arc(this.position.x, this.position.y, this.data.r, 0, 2 * Math.PI);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 5;
+          ctx.stroke();
+        } 
+        // 绘制三角形（顶点到中心距离为4/3r） //byd豆包弄得
+        else if (this.style.shape === 1) {
+          if (this.style.damageEffect != 0) {
+            color = getWhitenedColor(color, this.style.damageEffect)
+            borderColor = getWhitenedColor(borderColor, this.style.damageEffect)
+          }
+          const centerX = this.position.x;
+          const centerY = this.position.y;
+
+          var rotationRad = this.data.rotation * Math.PI / 180; 
+          if (this instanceof peasPlayer && this.vector.x != 0 && this.vector.y != 0) {
+            // 是玩家操控时使用动量向量计算旋转角度
+              rotationRad = Math.atan2(this.vector.y, this.vector.x) + Math.PI/2;
+            // 静止时使用默认旋转角度
+            if (this.vector.x === 0 && this.vector.y === 0) {
+              rotationRad = this.data.rotation * Math.PI / 180;
+            }
+          };
+
+          const r = this.data.r; // 基准圆半径
+          
+          // 关键几何参数：顶点到中心距离L = 4/3 r
+          // 满足条件：L - r = r - d（d为边到中心距离）
+          // 正三角形中d = L/2，因此d = 2/3 r，L - r = r - d = 1/3 r
+          const vertexDistance = (4/3) * r; // 顶点到中心的距离
+          const edgeDistance = vertexDistance / 2; // 边到中心的距离（正三角形特性）
+          
+          // 验证条件（调试用）
+          // console.log(`顶点超出圆的距离: ${vertexDistance - r} = 1/3 r`);
+          // console.log(`边到圆的距离: ${r - edgeDistance} = 1/3 r`);
+          
+          // 计算三个顶点（120度间隔，初始顶点朝上）
+          const points = [];
+          for (let i = 0; i < 3; i++) {
+            // 角度计算：旋转角度 + 120度间隔 + 初始朝上（-90度）
+            const angle = rotationRad + i * 2 * Math.PI / 3 - Math.PI/2;
+            points.push({
+              x: centerX + vertexDistance * Math.cos(angle),
+              y: centerY + vertexDistance * Math.sin(angle)
+            });
+          }
+
+          // 绘制三角形
+          ctx.beginPath();
+          ctx.moveTo(points[0].x, points[0].y);
+          ctx.lineTo(points[1].x, points[1].y);
+          ctx.lineTo(points[2].x, points[2].y);
+          ctx.closePath();
+          
+          ctx.lineJoin = 'round'; 
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 5;
+          ctx.stroke();
+        }
+        // 绘制正方形（shape=2）- 边长为2r
+        else if (this.style.shape == 2) {
+          if (this.style.damageEffect != 0) {
+            color = getWhitenedColor(color, this.style.damageEffect)
+            borderColor = getWhitenedColor(borderColor, this.style.damageEffect)
+          }
+          const centerX = this.position.x;
+          const centerY = this.position.y;
+          const r = this.data.r;
+          const sideLength = 2 * r;//边长=2r
+
+          // 计算正方形左上角坐标（基于中心定位）
+          const halfSide = sideLength / 2;
+
+          var rotationRad = this.data.rotation * Math.PI / 180; 
+          if (this instanceof peasPlayer && this.vector.x != 0 && this.vector.y != 0) { // || this instanceof spawn && this.style.redHealthBarTime < Date.now() //额，原本想做成没受伤时的spawn这样的，但是它们一直抖就算了……
+            // 是玩家操控时，或召唤物未受伤时使用动量向量计算旋转角度
+              rotationRad = Math.atan2(this.vector.y, this.vector.x) + Math.PI/2;
+            // 静止时使用默认旋转角度
+            if (this.vector.x === 0 && this.vector.y === 0) {
+              rotationRad = this.data.rotation * Math.PI / 180;
+            }
+          };
+
+
+          // 平移到中心位置，以便转后绘制
+          ctx.translate(centerX, centerY);
+          ctx.rotate(rotationRad);
+          
+          // 绘制正方形路径（以原点为中心）
+          ctx.beginPath();
+          ctx.rect(-halfSide, -halfSide, sideLength, sideLength);
+          
+          // 应用样式
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 5;
+          // 正方形描边圆角
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+          
+
+        }
+        // 绘制五边形（shape=3）- 边到中心距离为r
+        else if (this.style.shape == 3) {
+          if (this.style.damageEffect != 0) {
+            color = getWhitenedColor(color, this.style.damageEffect)
+            borderColor = getWhitenedColor(borderColor, this.style.damageEffect)
+          }
+          const centerX = this.position.x;
+          const centerY = this.position.y;
+          const r = this.data.r; // 边到中心的距离（边心距）
+          const sides = 5; // 五边形
+
+          var rotationRad = this.data.rotation * Math.PI / 180; 
+          if (this instanceof peasPlayer && this.vector.x != 0 && this.vector.y != 0) {
+            // 是玩家操控时使用动量向量计算旋转角度
+              rotationRad = Math.atan2(this.vector.y, this.vector.x) + Math.PI/2;
+            // 静止时使用默认旋转角度
+            if (this.vector.x === 0 && this.vector.y === 0) {
+              rotationRad = this.data.rotation * Math.PI / 180;
+            }
+          };
+
+          
+          // 正五边形几何计算
+          // 边心距a = r = R × cos(π/5) → 顶点到中心距离R = r / cos(π/5)
+          const vertexDistance = r / Math.cos(Math.PI / sides); // 顶点到中心距离
+          const angleStep = 2 * Math.PI / sides; // 每个顶点的角度间隔
+          
+          ctx.translate(centerX, centerY);
+          ctx.rotate(rotationRad);
+          
+          // 计算并绘制五边形顶点
+          ctx.beginPath();
+          for (let i = 0; i < sides; i++) {
+            // 从顶部开始绘制（-π/2偏移）
+            const angle = i * angleStep - Math.PI / 2;
+            const x = vertexDistance * Math.cos(angle);
+            const y = vertexDistance * Math.sin(angle);
+            
+            if (i === 0) {
+              ctx.moveTo(x, y); // 第一个点
+            } else {
+              ctx.lineTo(x, y); // 后续点
+            }
+          }
+          ctx.closePath();
+          
+          // 应用样式
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 5;
+          ctx.lineJoin = 'round'; // 圆角描边
+          ctx.stroke();
+        }
+        // 绘制六边形（shape=4）- 边到中心距离为r（边距=r）
+        else if (this.style.shape == 4) {
+          if (this.style.damageEffect != 0) {
+            color = getWhitenedColor(color, this.style.damageEffect)
+            borderColor = getWhitenedColor(borderColor, this.style.damageEffect)
+          }
+          const centerX = this.position.x;
+          const centerY = this.position.y;
+          const r = this.data.r; // 边到中心的距离（边心距）= r
+          const sides = 6; // 六边形
+
+          var rotationRad = this.data.rotation * Math.PI / 180; 
+          if (this instanceof peasPlayer || this.AI.includes("stickSpawn") && this.vector.x != 0 && this.vector.y != 0) {
+            // 是玩家操控时使用动量向量计算旋转角度
+              rotationRad = Math.atan2(this.vector.y, this.vector.x) + Math.PI/2;
+            // 静止时使用默认旋转角度
+            if (this.vector.x === 0 && this.vector.y === 0) {
+              rotationRad = this.data.rotation * Math.PI / 180;
+            }
+          };
+
+          
+          // 正六边形几何计算：
+          // 边心距（边到中心距离）= r = R × cos(π/6)
+          // 顶点到中心距离 R = r / cos(π/6) ≈ 1.1547r
+          const vertexDistance = r / Math.cos(Math.PI / sides);
+          const angleStep = 2 * Math.PI / sides; // 每个顶点间隔60度
+          
+          ctx.translate(centerX, centerY);
+          ctx.rotate(rotationRad);
+          
+          // 计算并绘制六边形顶点
+          ctx.beginPath();
+          for (let i = 0; i < sides; i++) {
+            // 从顶部开始绘制（-π/2偏移）
+            const angle = i * angleStep - Math.PI / 2;
+            const x = vertexDistance * Math.cos(angle);
+            const y = vertexDistance * Math.sin(angle);
+            
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.closePath();
+          
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 5;
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+        }
+        // 绘制八边形（shape=5）
+        else if (this.style.shape == 5) {
+          if (this.style.damageEffect != 0) {
+            color = getWhitenedColor(color, this.style.damageEffect)
+            borderColor = getWhitenedColor(borderColor, this.style.damageEffect)
+          }
+          const centerX = this.position.x;
+          const centerY = this.position.y;
+          const r = this.data.r; // 基准半径
+          const sides = 8; // 八边形
+          
+          // 八边形使用动量向量计算旋转角度
+          var rotationRad = this.data.rotation * Math.PI / 180; 
+          if (this instanceof peasPlayer && this.vector.x != 0 && this.vector.y != 0) {
+            // 是玩家操控时使用动量向量计算旋转角度
+              rotationRad = Math.atan2(this.vector.y, this.vector.x) + Math.PI/2;
+            // 静止时使用默认旋转角度
+            if (this.vector.x === 0 && this.vector.y === 0) {
+              rotationRad = this.data.rotation * Math.PI / 180;
+            }
+          };
+
+          // 正八边形几何计算：边心距（边到中心距离）= r
+          // 顶点到中心距离 = r / cos(π/8) ≈ 1.082r
+          const vertexDistance = r / Math.cos(Math.PI / sides);
+          const angleStep = 2 * Math.PI / sides; // 每个顶点间隔45度
+          
+          ctx.translate(centerX, centerY);
+          ctx.rotate(rotationRad);
+          
+          // 计算并绘制八边形顶点
+          ctx.beginPath();
+          for (let i = 0; i < sides; i++) {
+            // 从顶部开始绘制（-π/2偏移）
+            const angle = i * angleStep - Math.PI / 2;
+            const x = vertexDistance * Math.cos(angle);
+            const y = vertexDistance * Math.sin(angle);
+            
+            if (i === 0) {
+              ctx.moveTo(x, y); // 第一个点
+            } else {
+              ctx.lineTo(x, y); // 后续点
+            }
+          }
+          ctx.closePath();
+          
+          // 应用样式
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 5;
+          ctx.lineJoin = 'round'; // 圆角描边
+          ctx.stroke();
+        }
+
+        if (this.style.damageEffect > 0.01) {
+          this.style.damageEffect -= (this.style.damageEffect-this.style.damageEffect*0.6)*timeScale;
+        } else {
+          this.style.damageEffect = 0
+        };//伤害效果减少，关于timeScale
+        ctx.restore();
+      }
+      DrawHealthBar() {
+        if (this.isDying) return; // 死亡时跳过
+
+        //血条区
+        if (this.data.health < 1 && this.data.maxHealth >= 200 && !(this instanceof bullet) || this instanceof peasPlayer && this.data.health < 1) { //血量小于100%且上限大于200时绘制血量
+          ctx.globalAlpha = 0.8//透明
+          var x = this.position.x;
+          var y = this.position.y;
+          var pointsY = this.position.y + this.data.r * 1.25;
+          var startPointsX = this.position.x - this.data.r;
+          var endPointsX = this.position.x + this.data.r;
+
+          var healthEndPointX = startPointsX + this.data.health * this.data.r * 2
+
+          var redHealthEndPointX = startPointsX + this.style.redHealthBar * this.data.r * 2
+
+          ctx.beginPath(); //绘制血条底
+          ctx.moveTo(startPointsX, pointsY)
+          ctx.lineTo(endPointsX, pointsY)
+          ctx.lineCap = 'round';
+          ctx.lineWidth = this.data.r * 0.45;
+          ctx.strokeStyle = "#222222";
+          ctx.stroke();
+          if (this.style.redHealthBar > this.data.health && this.style.redHealthBarTime < Date.now()) { //红血条保持时间结束时减少红血条
+            this.style.redHealthBar -= 0.015;
+
+          };
+          if (this.style.redHealthBar < this.style.health) {this.style.redHealthBar = this.style.health < 0}
+
+          ctx.beginPath(); //绘制血条红底
+          ctx.moveTo(startPointsX, pointsY)
+          ctx.lineTo(redHealthEndPointX, pointsY)
+          ctx.lineCap = 'round';
+          ctx.lineWidth = this.data.r * 0.3;
+          ctx.strokeStyle = "#ec3841";
+          ctx.stroke();
+
+          ctx.globalAlpha = 1;
+          ctx.beginPath(); //绘制血条
+          ctx.moveTo(startPointsX, pointsY)
+          ctx.lineTo(healthEndPointX, pointsY)
+          ctx.lineCap = 'round';
+          ctx.lineWidth = this.data.r * 0.32;
+          ctx.strokeStyle = "#7acb36";
+          ctx.stroke();
+          
+          
+        }
+      }
+    };
+    //可移动实体类
+    class movableEntity extends entity {
+      constructor(x,y,vectorX=0,vectorY=0,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass=1,damage,maxHealth,health,heal,weapon) {  // 接收extraKnockback参数
+        super(x,y,shape,color,borderColor,r,rotation,extraKnockback,team,damage,maxHealth,health,heal,weapon);
+        this.vector = new vector(vectorX,vectorY);
+        this.data.speed = speed;
+        this.data.accSpeed = accSpeed;
+        this.data.decSpeed = decSpeed;
+        this.data.beCollided = beCollided;
+        this.data.mass = mass;
+        this.hasEnteredCanvas = false;
+      }
+      move() {
+        if (this.data.moving) {
+          var moveRadian = this.data.rotation * Math.PI / 180;
+          if (this.data.moveRate > 1) {this.data.moveRate=1} else if (this.data.moveRate < 0) {this.data.moveRate = 0};
+          this.vector.x = this.vector.x + this.data.speed * this.data.moveRate * Math.sin(moveRadian) * this.data.accSpeed;
+          this.vector.y = this.vector.y - this.data.speed * this.data.moveRate * Math.cos(moveRadian) * this.data.accSpeed;
+        };
+        this.vector.x *= this.data.decSpeed;
+        this.vector.y *= this.data.decSpeed;
+        if (Math.abs(this.vector.x) < 0.00000001) {this.vector.x=0};
+        if (Math.abs(this.vector.y) < 0.00000001) {this.vector.y=0};
+
+        this.position.x += this.vector.x;
+        this.position.y += this.vector.y;
+
+        //边界碰撞逻辑
+        if (this.hasEnteredCanvas) {
+          if (this.position.x - this.data.r < 0) {
+            this.position.x = this.data.r; // 左边界
+            this.vector.x *= -1 * this.data.decSpeed;
+          } 
+          if (this.position.x + this.data.r > canvas.width) {
+            this.position.x = canvas.width - this.data.r; // 右边界
+            this.vector.x *= -1 * this.data.decSpeed;
+          }
+          if (this.position.y - this.data.r < 0) {
+            this.position.y = this.data.r; // 上边界
+            this.vector.y *= -1 * this.data.decSpeed;
+          }
+          if (this.position.y + this.data.r > canvas.height) {
+            this.position.y = canvas.height - this.data.r; // 下边界
+            this.vector.y *= -1 * this.data.decSpeed;
+          }
+        }
+
+        //子弹碰撞时似了
+        if (this.position.x + this.data.r < 0 || this.position.x - this.data.r > canvas.width || this.position.y + this.data.r < 0 || this.position.y - this.data.r > canvas.height) {
+          if (this instanceof bullet) {this.isDying=true}
+        }
+
+        //判断实体是否在canvas内部
+        const isCenterInsideNow = 
+          this.position.x - this.data.r > 0 &&
+          this.position.x + this.data.r < canvas.width &&
+          this.position.y - this.data.r > 0 &&
+          this.position.y + this.data.r < canvas.height
+        ;
+        if (!this.hasEnteredCanvas && isCenterInsideNow && !(this instanceof bullet)) { //子弹可超出屏幕，但是一出去就似了
+          this.hasEnteredCanvas = true;
+        }
+
+        //边界碰撞逻辑
+        if (this.hasEnteredCanvas) {
+          if (this.position.x - this.data.r < 0) {
+            this.position.x = this.data.r; // 左边界
+            this.vector.x *= -1 * this.data.decSpeed;
+          } 
+          if (this.position.x + this.data.r > canvas.width) {
+            this.position.x = canvas.width - this.data.r; // 右边界
+            this.vector.x *= -1 * this.data.decSpeed;
+          }
+          if (this.position.y - this.data.r < 0) {
+            this.position.y = this.data.r; // 上边界
+            this.vector.y *= -1 * this.data.decSpeed;
+          }
+          if (this.position.y + this.data.r > canvas.height) {
+            this.position.y = canvas.height - this.data.r; // 下边界
+            this.vector.y *= -1 * this.data.decSpeed;
+          }
+        }
+      }
+    };
+    //玩家类
+    class peasPlayer extends movableEntity {
+      constructor(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI,damage,maxHealth,health,heal,weapon) {  // 接收extraKnockback参数
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,damage,maxHealth,health,heal,weapon);
+        this.AI = AI;
+      }
+      control() {
+        if (isDragging) {
+          this.data.rotation = joyStickRotation;
+          this.data.moveRate = joiStickControlPlayerSpeed
+          if (this.data.moveRate > 1) {this.data.moveRate = 1}
+          this.data.moving = true;
+        } else if (moveRad != 0) {
+          this.data.moveRate = 1;
+          this.data.moving = true;
+          if (moveRad === 1) {
+            this.data.rotation= 0;
+          } else if (moveRad === 2) {
+            this.data.rotation= 45;
+          } else if (moveRad === 3) {
+            this.data.rotation= 90;
+          } else if (moveRad === 4) {
+            this.data.rotation= 135;
+          } else if (moveRad === 5) {
+            this.data.rotation= 180;
+          } else if (moveRad === 6) {
+            this.data.rotation= 225;
+          } else if (moveRad === 7) {
+            this.data.rotation= 270;
+          } else if (moveRad === 8) {
+            this.data.rotation= 315;
+          };
+        } else {
+          this.data.moving = false;
+          if (this.vector.x != 0 && this.vector.y != 0) {this.data.rotation = (Math.atan2(this.vector.y, this.vector.x) + Math.PI/2) * (180 / Math.PI);}
+        }
+      }
+      runCollisionAI(entity) {
+        //调试类AI
+        if (this.AI.includes("controlEntityRotation")) {
+          entity.data.rotation += 1
+        }
+      }
+
+      runAI() {
+        //攻击AI
+        if (["Basic","TripleShot","PentaShot","HeptaShot"].includes(this.weapon[0])) { //远程AI
+          let closestEnemy = null;
+          let closestDist = Infinity;
+          for (let i = 0; i < entities.length; i++) {
+            const target = entities[i];
+            if (target instanceof peasEnemy || target instanceof enemySpawn) {
+              const dx = target.position.x - this.position.x;
+              const dy = target.position.y - this.position.y;
+              const dist = Math.hypot(dx, dy) - this.data.r - target.data.r; //边缘索敌
+              if (dist < this.weapon[4] + this.data.r && dist < closestDist) {
+                closestDist = dist;
+                closestEnemy = target;
+              }
+            }
+          };
+          if (closestEnemy) {
+            const angleRad = Math.atan2(closestEnemy.position.x - this.position.x, this.position.y - closestEnemy.position.y);
+            const angleDeg = angleRad * 180 / Math.PI;
+            this.weapon.shootAngle = angleDeg;
+            this.weapon.attacking = true;
+          } else {
+            this.weapon.attacking = false;
+          }
+        }
+        else if (["Summoner","Stick","Tower"].includes(this.weapon[0])) { //召唤师AI
+          this.weapon.attacking = true;
+        }
+
+
+      };
+    };
+    //敌人类
+    class peasEnemy extends movableEntity {
+      constructor (x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,AI,searchRadius,mass,damage,maxHealth,health,heal,weapon,exp) {  // 接收extraKnockback参数
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,damage,maxHealth,health,heal,weapon);  // 传递给父类
+        this.AI = AI;
+        this.searchRadius = searchRadius;
+        this.exp = exp;
+      }
+      runAI() {
+        if (this.isDying) return; // 死亡时
+        //在画面外 //this.position.x + this.data.r < 0 || this.position.x - this.data.r > canvas.width || this.position.y + this.data.r < 0 || this.position.y - this.data.r > canvas.width
+        if (!this.hasEnteredCanvas) {
+          let closestPlayer = null;
+          let closestDist = Infinity;
+          for (let i = 0; i < entities.length; i++) {
+            const target = entities[i];
+            if (target instanceof peasPlayer) {
+              const dx = target.position.x - this.position.x;
+              const dy = target.position.y - this.position.y;
+              const dist = Math.hypot(dx, dy) - this.data.r - target.data.r; //边缘索敌
+              if (dist < closestDist) {
+                closestDist = dist;
+                closestPlayer = target;
+              }
+            }
+          };
+          if (closestPlayer) {
+            const angleRad = Math.atan2(closestPlayer.position.x - this.position.x, this.position.y - closestPlayer.position.y);
+            const angleDeg = angleRad * 180 / Math.PI;
+            this.data.rotation = angleDeg;
+            this.data.moving = true;
+          } else {
+            this.data.moving = false;
+          }
+        }
+
+        else if (this.AI.includes("Chase")) {
+          let closestPlayer = null;
+          let closestDist = Infinity;
+          for (let i = 0; i < entities.length; i++) {
+            const target = entities[i];
+            if (target instanceof peasPlayer) {
+              const dx = target.position.x - this.position.x;
+              const dy = target.position.y - this.position.y;
+              const dist = Math.hypot(dx, dy) - this.data.r - target.data.r; //边缘索敌
+              if (dist < this.searchRadius + this.data.r && dist < closestDist) {
+                closestDist = dist;
+                closestPlayer = target;
+              }
+            }
+          };
+          if (closestPlayer) {
+            const angleRad = Math.atan2(closestPlayer.position.x - this.position.x, this.position.y - closestPlayer.position.y);
+            const angleDeg = angleRad * 180 / Math.PI;
+            this.data.rotation = angleDeg;
+            this.data.moving = true;
+          } else {
+            this.data.moving = false;
+          }
+        }
+        else if (this.AI.includes("Close")) { //靠近AI
+          var shootRadius = this.weapon[4]; //武器射程
+          if (shootRadius == undefined) {
+            shootRadius = this.searchRadius; //没武器的话根据索敌距离
+            if (shootRadius > this.searchRadius) {shootRadius = shootRadius/3 + this.searchRadius*2/3} //避免距离太长
+          }
+          let closestPlayer = null;
+          let closestDist = Infinity;
+          for (let i = 0; i < entities.length; i++) {
+            const target = entities[i];
+            if (target instanceof peasPlayer) {
+              const dx = target.position.x - this.position.x;
+              const dy = target.position.y - this.position.y;
+              const dist = Math.hypot(dx, dy) - this.data.r - target.data.r; //边缘索敌
+              if (dist < this.searchRadius + this.data.r && dist < closestDist) {
+                closestDist = dist;
+                closestPlayer = target;
+              }
+            }
+          };
+          if (closestPlayer) {
+            const angleRad = Math.atan2(closestPlayer.position.x - this.position.x, this.position.y - closestPlayer.position.y);
+            const angleDeg = angleRad * 180 / Math.PI;
+            this.data.rotation = angleDeg;
+            this.data.moving = true;
+            if (closestDist  < shootRadius * 2/3) {this.data.moving = false;} //距离足够则不继续靠近
+          } else {
+            this.data.moving = false;
+          }
+        };
+
+        //敌方使用武器的AI
+        const centerEnteredCanvas = (this.position.x > 0 && this.position.y > 0 && this.position.x < canvas.width && this.position.y < canvas.height)
+        if (this.AI.includes("UseWeapon") && this.isDying == false && centerEnteredCanvas) {
+          //攻击AI
+          if (["Basic","TripleShot","PentaShot","HeptaShot"].includes(this.weapon[0])) {
+            let closestPlayer = null;
+            let closestDist = Infinity;
+            for (let i = 0; i < entities.length; i++) {
+              const target = entities[i];
+              if (target instanceof peasPlayer) {
+                  //根据提前量射击
+                  const distance = Math.hypot(
+                      target.position.x - this.position.x, 
+                      target.position.y - this.position.y
+                  );
+                  
+                  //预估子弹到达目标所需时间
+                  const bulletSpeed = this.weapon[5]; //弹速
+                  const estimatedTime = distance / bulletSpeed;
+                  
+                  // 计算预测位置（当前位置 + 移动向量 * 预估时间）
+                  const predictedX = target.position.x + target.vector.x * estimatedTime;
+                  const predictedY = target.position.y + target.vector.y * estimatedTime;
+                  
+                  const dist = Math.hypot(
+                      target.position.x - this.position.x, 
+                      target.position.y - this.position.y
+                  ) - this.data.r - target.data.r;
+                  
+                  if (dist < this.weapon[4] + this.data.r && dist < closestDist) {
+                      closestDist = dist;
+                      closestPlayer = {
+                          position: {
+                              x: predictedX,
+                              y: predictedY
+                          },
+                          vector: target.vector
+                      };
+                  }
+              }
+            };
+            if (closestPlayer) {
+              const angleRad = Math.atan2(closestPlayer.position.x - this.position.x, this.position.y - closestPlayer.position.y);
+              const angleDeg = angleRad * 180 / Math.PI;
+              this.weapon.shootAngle = angleDeg;
+              this.weapon.attacking = true;
+            } else {
+              this.weapon.attacking = false;
+            }
+          }
+          else if (["Summoner","Stick"].includes(this.weapon[0])) {
+            this.weapon.attacking = true;
+            if (entities.length > 600) {this.weapon.attacking = false;}
+          }
+
+        };
+
+
+      }
+    };
+
+
+    //障碍物类
+    class unMovableEntity extends entity {
+      constructor(x,y,shape,color,borderColor,r,rotation,extraKnockback = 0,team,AI=[],damage,maxHealth,health,heal,weapon,displayingText,mass,speed,accSpeed,decSpeed) {
+        super(x,y,shape,color,borderColor,r,rotation,extraKnockback,team,damage,maxHealth,health,heal,weapon)
+        this.AI = AI;
+        this.displayingText = displayingText; //[Text,px,透明度,x,y]
+        this.saveMass = mass;
+        this.saveSpeed = speed;
+        this.saveAccSpeed = accSpeed;
+        this.saveDecSpeed = decSpeed;
+
+        this.showChangelog = false;
+        this.changelogX = -800;
+      }
+      runCollisionAI(entity) {
+        if (this.AI.includes("Debugger")) {
+          if (entity instanceof peasPlayer) {DebugDrawing = !DebugDrawing;}
+        } else if (this.AI.includes("DrawEntityData")) {
+          if (entity instanceof peasPlayer) {EntityDataDrawing = !EntityDataDrawing;}
+        } else if (this.AI.includes("ChangeWeapon") && entity instanceof peasPlayer) { 
+          entity.weapon[0] = this.weapon[0]
+          entity.weapon[1] = this.weapon[1]
+          entity.weapon[2] = this.weapon[2]
+          entity.weapon[3] = this.weapon[3]
+          entity.weapon[4] = this.weapon[4]
+          entity.weapon[5] = this.weapon[5]
+          entity.weapon[6] = this.weapon[6]
+          entity.weapon[7] = this.weapon[7]
+          entity.weapon[8] = this.weapon[8]
+          entity.weapon[9] = this.weapon[9]
+          entity.weapon[10] = this.weapon[10]
+          entity.style.shape = this.style.shape
+          entity.data.damage = this.data.damage
+          entity.data.maxHealth = this.data.maxHealth
+          entity.data.heal = this.data.heal
+          entity.data.r = this.data.r
+          entity.data.mass = this.saveMass
+          entity.data.speed = this.saveSpeed
+          entity.data.accSpeed = this.saveAccSpeed
+          entity.data.decSpeed = this.saveDecSpeed
+
+        }
+
+        else if (this.AI.includes("TestStarter") && entity instanceof peasPlayer) {
+          TestSpawner()
+          for (let i = 0; i < entities.length; i++) {
+            if (entities[i] instanceof unMovableEntity) {entities[i].isDying = true}
+          }
+        }
+        else if (this.AI.includes("WaveStarter") && entity instanceof peasPlayer) {
+          WaveControlSystem.waveStarted = true;
+          DebugDrawing = false;
+          this.isDying = true;
+        }
+        else if (this.AI.includes("Changelog") && entity instanceof peasPlayer) {
+          this.showChangelog = !this.showChangelog
+        }
+      }
+      runAI() {
+        if (this.AI.includes("TextDisplay")) {
+
+          ctx.font = `${this.displayingText[1]}px Ubuntu`;
+          const textMetrics = ctx.measureText(this.displayingText[0])
+          const textWidth = textMetrics.width;
+
+          const displayX = this.position.x - textWidth/2 + this.displayingText[3]
+          const displayY = this.position.y + this.displayingText[1]/3 + this.displayingText[4]
+
+
+          DrawUbuntu(this.displayingText[0],displayX,displayY,this.displayingText[1],undefined,undefined,this.displayingText[2])
+        }
+        else if (this.AI.includes("Changelog")) {
+          if (this.showChangelog) {this.changelogX = this.changelogX*0.9 + 35*0.1} else {this.changelogX = this.changelogX*0.85 + -600*0.15}
+          //console.log(this.changelogX)
+          DrawUbuntu("Changelog",this.changelogX,750,30)
+          DrawUbuntu("PeasWave Beta v0.0.1",this.changelogX,775,20)
+          DrawUbuntu("主要玩法已制作完成，感谢您的游玩！",this.changelogX,800,20)
+          DrawUbuntu("Main game content completed. Thanks for playing!",this.changelogX,825,20)
+          DrawUbuntu("Beta v0.0.2 & Beta v0.0.3 整体平衡性调整",this.changelogX,850,20)
+          DrawUbuntu("增强: Rammers/BasicII/Cannon/Tower Health",this.changelogX,875,20)
+          DrawUbuntu("削弱、调整部分Waves",this.changelogX,900,20)
+          DrawUbuntu("修复bug: 触屏端pointer事件丢失",this.changelogX,925,20)
+          DrawUbuntu("— LoserXxh",this.changelogX+367,950,20)
+
+
+
+
+          if (WaveControlSystem.waveStarted) {this.showChangelog = false ;this.isDying = true};
+        }
+      }
+    };
+    //物体类
+    class normalEntity extends movableEntity {
+      constructor(x,y,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=[],damage,maxHealth,health,heal,weapon) {
+        super(x,y,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,damage,maxHealth,health,heal,weapon)
+        this.AI = AI;
+      }
+    };
+
+    //玩家可进入障碍物
+    class friendlyUnMovableEntity extends entity {
+      constructor(x,y,shape,color,borderColor,r,rotation,extraKnockback = 0,team,damage,maxHealth,health,heal,weapon) {
+        super(x,y,shape,color,borderColor,r,rotation,extraKnockback,team,damage,maxHealth,health,heal,weapon)
+      }
+    };
+
+    //射弹
+    class bullet extends movableEntity { //子弹
+      constructor(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=[],damage,maxHealth,health,heal,existenceTime,weapon) {
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,damage,maxHealth,health,heal,weapon)
+        this.AI = AI;
+        this.existenceTime = existenceTime;
+        this.style.deathDuration = 80
+      }
+      runAI() {
+        if (this.AI.includes("normal")) {
+          this.data.moving = true;
+        };
+        this.existenceTime -= targetDelta;
+        if (this.existenceTime <=0) {this.isDying = true}
+      }
+    };
+    class playerBullet extends bullet {
+      constructor(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=[],damage,maxHealth,health,heal,existenceTime,weapon) {
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,AI,damage,maxHealth,health,heal,existenceTime,weapon)
+      }
+    }
+    class enemyBullet extends bullet {
+      constructor(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=[],damage,maxHealth,health,heal,existenceTime,weapon) {
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,AI,damage,maxHealth,health,heal,existenceTime,weapon)
+      }
+    }
+    class spawn extends movableEntity { //召唤物
+      constructor(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=[],damage,maxHealth,health,heal,existenceTime,weapon,spawnBy) {
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,damage,maxHealth,health,heal,weapon)
+        this.AI = AI;
+        this.existenceTime = existenceTime;
+        this.style.deathDuration = 80
+        this.spawnBy = spawnBy;
+        this.hasEnteredCanvas = true
+      }
+      runAI() {
+        if (this.spawnBy.isDying == true) {this.isDying = true}
+        if (this.AI.includes("normalSpawn")) {
+          if (this.spawnBy.isDying == true) {
+            this.isDying = true; //hm,随机的二次出现，但是没关系，留着就留着吧UwU
+          } else {
+            this.hasEnteredCanvas = true;
+            let closestTarget = null; 
+            let closestDist = Infinity;
+            for (let i = 0; i < entities.length; i++) {
+              const target = entities[i];
+
+              var targetSelect; //不同队伍不同索敌
+              if (this.data.team == 2) {targetSelect = (target instanceof peasPlayer || target instanceof playerSpawn)}
+              if (this.data.team == 1) {targetSelect = (target instanceof peasEnemy || target instanceof enemySpawn)}
+              if (targetSelect) {
+                const dx = target.position.x - this.spawnBy.position.x;
+                const dy = target.position.y - this.spawnBy.position.y;
+                const dist = Math.hypot(dx, dy) - this.spawnBy.data.r - target.data.r; //边缘索敌
+                if (dist < this.spawnBy.weapon[4] + this.spawnBy.data.r && dist < closestDist) {
+                  closestDist = dist;
+                  closestTarget = target;
+                }
+              }
+            };
+            const sdx = this.position.x - this.spawnBy.position.x;
+            const sdy = this.position.y - this.spawnBy.position.y;
+            const spawnerDist = Math.hypot(sdx, sdy);
+            if (closestTarget) {
+              const angleRad = Math.atan2(closestTarget.position.x - this.position.x, this.position.y - closestTarget.position.y);
+              const angleDeg = angleRad * 180 / Math.PI;
+              this.data.rotation = angleDeg;
+              this.data.moving = true;
+            } else if (spawnerDist > Math.min(this.spawnBy.weapon[4] / 2 , 500)) { //否则回到召唤者身边
+                const angleRad = Math.atan2(this.spawnBy.position.x - this.position.x, this.position.y - this.spawnBy.position.y);
+                const angleDeg = angleRad * 180 / Math.PI;
+                this.data.rotation = angleDeg;
+                this.data.moving = true;
+            }
+            else {this.data.moving = false} // 否则不移动
+          }
+          if (!this.data.moving) {
+            //const dx = this.spawnBy.position.x - this.position.x;const dy = this.spawnBy.position.y - this.position.y;this.data.rotation = (Math.atan2(dy, dx) + Math.PI/2) * (180 / Math.PI);
+            this.data.rotation += 0.5
+          }
+          this.existenceTime -= targetDelta;
+          if (this.existenceTime <=0) {this.isDying = true}
+        } else if (this.AI.includes("stickSpawn")) {
+          if (this.spawnBy.data.moving) {
+            this.data.rotation = this.spawnBy.data.rotation;
+            this.data.moveRate = this.spawnBy.data.moveRate;
+            this.data.moving = this.spawnBy.data.moving
+          } else {
+            this.data.moving = false
+            if (this.vector.x != 0 && this.vector.y != 0) {this.data.rotation = (Math.atan2(this.vector.y, this.vector.x) + Math.PI/2) * (180 / Math.PI);}
+          }
+        } else if (this.AI.includes("towerSpawn")) { //工程师防御塔
+          if (["Basic","PentaShot"].includes(this.weapon[0])) { //远程AI
+            let closestTarget = null;
+            let closestDist = Infinity;
+            for (let i = 0; i < entities.length; i++) {
+              const target = entities[i];
+              var targetSelect; //不同队伍不同索敌
+              if (this.data.team == 2) {targetSelect = (target instanceof peasPlayer || target instanceof playerSpawn)}
+              if (this.data.team == 1) {targetSelect = (target instanceof peasEnemy || target instanceof enemySpawn)}
+              if (targetSelect) {
+
+                //根据提前量射击
+                const distance = Math.hypot(
+                    target.position.x - this.position.x, 
+                    target.position.y - this.position.y
+                );
+                
+                //预估子弹到达目标所需时间
+                const bulletSpeed = this.weapon[5]; //弹速
+                const estimatedTime = distance / bulletSpeed;
+                
+                // 计算预测位置（当前位置 + 移动向量 * 预估时间）
+                const predictedX = target.position.x + target.vector.x * estimatedTime;
+                const predictedY = target.position.y + target.vector.y * estimatedTime;
+                
+                const dist = Math.hypot(
+                    target.position.x - this.position.x, 
+                    target.position.y - this.position.y
+                ) - this.data.r - target.data.r;
+
+                if (dist < this.weapon[4] + this.data.r && dist < closestDist) {
+                    closestDist = dist;
+                    closestTarget = {
+                        position: {
+                            x: predictedX,
+                            y: predictedY
+                        },
+                        vector: target.vector
+                    };
+                }
+              }
+            };
+            if (closestTarget) {
+              const angleRad = Math.atan2(closestTarget.position.x - this.position.x, this.position.y - closestTarget.position.y);
+              const angleDeg = angleRad * 180 / Math.PI;
+              this.weapon.shootAngle = this.weapon.shootAngle*0.75 + angleDeg*0.25;
+              this.weapon.attacking = true;
+            } else {
+              this.weapon.attacking = false;
+              this.weapon.shootAngle += 0.5
+            }
+            this.data.rotation = this.weapon.shootAngle
+          }
+        };  
+        this.existenceTime -= targetDelta;
+        if (this.existenceTime <=0) {this.isDying = true}
+      }
+    };
+    class playerSpawn extends spawn {
+      constructor(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=[],damage,maxHealth,health,heal,existenceTime,weapon,spawnBy) {
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,AI,damage,maxHealth,health,heal,existenceTime,weapon,spawnBy)
+      }
+    };
+    class enemySpawn extends spawn {
+      constructor(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=[],damage,maxHealth,health,heal,existenceTime,weapon,spawnBy) {
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,AI,damage,maxHealth,health,heal,existenceTime,weapon,spawnBy)
+      }
+    };
+
+    class playerPenetrateSpawn extends spawn { //穿透召唤
+      constructor(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=[],damage,maxHealth,health,heal,existenceTime,weapon,spawnBy) {
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,AI,damage,maxHealth,health,heal,existenceTime,weapon,spawnBy)
+      }
+    };
+    class enemyPenetrateSpawn extends spawn { //穿透召唤
+      constructor(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=[],damage,maxHealth,health,heal,existenceTime,weapon,spawnBy) {
+        super(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,AI,damage,maxHealth,health,heal,existenceTime,weapon,spawnBy)
+      }
+    };
+
+
+
+
+    const waveContent = [
+  [{"type":"Normal","quantity":3,"rate":1}],
+  [{"type":"Normal","quantity":5,"rate":0.8}],
+  [{"type":"Normal","quantity":7,"rate":0.8}],
+  [{"type":"Normal","quantity":9,"rate":0.8}],
+  [{"type":"Normal","quantity":9,"rate":0.8},{"type":"Triangle","quantity":2,"rate":1}],
+
+  [{"type":"Normal","quantity":10,"rate":0.8},{"type":"Triangle","quantity":5,"rate":0.8}],
+  [{"type":"Normal","quantity":12,"rate":0.8},{"type":"Triangle","quantity":6,"rate":0.8}],
+  [{"type":"Normal","quantity":14,"rate":0.8},{"type":"Triangle","quantity":8,"rate":0.8}],
+  [{"type":"Normal","quantity":16,"rate":0.8},{"type":"Triangle","quantity":10,"rate":0.8},{"type":"Pentagon","quantity":1,"rate":1}],
+  [{"type":"Normal","quantity":16,"rate":0.8},{"type":"Triangle","quantity":12,"rate":0.8},{"type":"Pentagon","quantity":3,"rate":0.3}],
+
+  [{"type":"Normal","quantity":18,"rate":0.8},{"type":"Triangle","quantity":13,"rate":0.8},{"type":"Pentagon","quantity":3,"rate":0.3}],
+  [{"type":"Normal","quantity":20,"rate":0.8},{"type":"Triangle","quantity":14,"rate":0.8},{"type":"Pentagon","quantity":4,"rate":0.3}],
+  [{"type":"Normal","quantity":22,"rate":0.8},{"type":"Triangle","quantity":15,"rate":0.8},{"type":"Pentagon","quantity":4,"rate":0.3}],
+  [{"type":"Normal","quantity":24,"rate":0.8},{"type":"Triangle","quantity":16,"rate":0.8},{"type":"Pentagon","quantity":5,"rate":0.3}],
+  [{"type":"Normal","quantity":50,"rate":0.8},{"type":"Triangle","quantity":17,"rate":0.8},{"type":"Pentagon","quantity":5,"rate":0.3}],
+
+
+
+  [{"type":"Normal","quantity":30,"rate":0.8},{"type":"Triangle","quantity":20,"rate":0.8},{"type":"Pentagon","quantity":5,"rate":0.3}],
+  [{"type":"Normal","quantity":32,"rate":0.8},{"type":"Triangle","quantity":21,"rate":0.8},{"type":"Pentagon","quantity":5,"rate":0.3}],
+  [{"type":"Normal","quantity":34,"rate":0.8},{"type":"Triangle","quantity":22,"rate":0.8},{"type":"Pentagon","quantity":5,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":1}],
+  [{"type":"Normal","quantity":36,"rate":0.8},{"type":"Triangle","quantity":23,"rate":0.8},{"type":"Pentagon","quantity":5,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.05}],
+  [{"type":"Normal","quantity":38,"rate":0.8},{"type":"Triangle","quantity":24,"rate":0.8},{"type":"Pentagon","quantity":5,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.1}],
+
+  [{"type":"Normal","quantity":40,"rate":0.8},{"type":"Triangle","quantity":25,"rate":0.8},{"type":"Pentagon","quantity":6,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.1},{"type":"BetaTriangle","quantity":1,"rate":1}],
+  [{"type":"Normal","quantity":42,"rate":0.8},{"type":"Triangle","quantity":26,"rate":0.8},{"type":"Pentagon","quantity":7,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.1},{"type":"BetaTriangle","quantity":1,"rate":0.05}],
+  [{"type":"Normal","quantity":44,"rate":0.8},{"type":"Triangle","quantity":27,"rate":0.8},{"type":"Pentagon","quantity":8,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.1},{"type":"BetaTriangle","quantity":1,"rate":0.1}],
+  [{"type":"Normal","quantity":46,"rate":0.8},{"type":"Triangle","quantity":28,"rate":0.8},{"type":"Pentagon","quantity":9,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.1},{"type":"BetaTriangle","quantity":1,"rate":0.1}],
+  [{"type":"Normal","quantity":48,"rate":0.8},{"type":"Triangle","quantity":29,"rate":0.8},{"type":"Pentagon","quantity":10,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.1},{"type":"BetaTriangle","quantity":1,"rate":0.1}],
+
+  [{"type":"Normal","quantity":50,"rate":0.8},{"type":"Triangle","quantity":30,"rate":0.8},{"type":"Pentagon","quantity":11,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.15},{"type":"BetaTriangle","quantity":1,"rate":0.15},{"type":"BetaSquare","quantity":1,"rate":1}],
+  [{"type":"Normal","quantity":52,"rate":0.8},{"type":"Triangle","quantity":31,"rate":0.8},{"type":"Pentagon","quantity":12,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.15},{"type":"BetaTriangle","quantity":1,"rate":0.15},{"type":"BetaSquare","quantity":1,"rate":0.1}],
+  [{"type":"Normal","quantity":54,"rate":0.8},{"type":"Triangle","quantity":32,"rate":0.8},{"type":"Pentagon","quantity":13,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.15},{"type":"BetaTriangle","quantity":1,"rate":0.15},{"type":"BetaSquare","quantity":1,"rate":0.15}],
+  [{"type":"Normal","quantity":56,"rate":0.8},{"type":"Triangle","quantity":33,"rate":0.8},{"type":"Pentagon","quantity":14,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.2},{"type":"BetaTriangle","quantity":1,"rate":0.2},{"type":"BetaSquare","quantity":1,"rate":0.2}],
+  [{"type":"Normal","quantity":80,"rate":0.8},{"type":"Triangle","quantity":60,"rate":0.8},{"type":"Pentagon","quantity":20,"rate":0.3},{"type":"BetaPentagon","quantity":1,"rate":0.75},{"type":"BetaTriangle","quantity":1,"rate":0.75},{"type":"BetaSquare","quantity":1,"rate":0.75}],
+
+
+
+  [{"type":"Normal","quantity":60,"rate":0.8},{"type":"Triangle","quantity":20,"rate":0.8},{"type":"Pentagon","quantity":16,"rate":0.3},{"type":"BetaPentagon","quantity":2,"rate":0.2},{"type":"BetaTriangle","quantity":2,"rate":0.2},{"type":"BetaSquare","quantity":2,"rate":0.2},{"type":"AlphaPentagon","quantity":1,"rate":1}],
+  [{"type":"Normal","quantity":73,"rate":0.8},{"type":"Triangle","quantity":20,"rate":0.8},{"type":"Pentagon","quantity":18,"rate":0.3},{"type":"BetaPentagon","quantity":2,"rate":0.2},{"type":"BetaTriangle","quantity":3,"rate":0.2},{"type":"BetaSquare","quantity":3,"rate":0.2},{"type":"AlphaPentagon","quantity":1,"rate":0.1}],
+  [{"type":"Normal","quantity":86,"rate":0.8},{"type":"Triangle","quantity":20,"rate":0.8},{"type":"Pentagon","quantity":20,"rate":0.3},{"type":"BetaPentagon","quantity":2,"rate":0.2},{"type":"BetaTriangle","quantity":4,"rate":0.2},{"type":"BetaSquare","quantity":4,"rate":0.2},{"type":"AlphaPentagon","quantity":1,"rate":0.15}],
+  [{"type":"Normal","quantity":99,"rate":0.8},{"type":"Triangle","quantity":20,"rate":0.8},{"type":"Pentagon","quantity":22,"rate":0.3},{"type":"BetaPentagon","quantity":2,"rate":0.2},{"type":"BetaTriangle","quantity":5,"rate":0.2},{"type":"BetaSquare","quantity":5,"rate":0.2},{"type":"AlphaPentagon","quantity":1,"rate":0.2}],
+  [{"type":"Normal","quantity":110,"rate":0.8},{"type":"Triangle","quantity":20,"rate":0.8},{"type":"Pentagon","quantity":24,"rate":0.3},{"type":"BetaPentagon","quantity":3,"rate":0.2},{"type":"BetaTriangle","quantity":6,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":1,"rate":0.25}],
+
+  [{"type":"Normal","quantity":110,"rate":0.8},{"type":"Triangle","quantity":30,"rate":0.8},{"type":"Pentagon","quantity":26,"rate":0.4},{"type":"BetaPentagon","quantity":4,"rate":0.25},{"type":"BetaTriangle","quantity":6,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":2,"rate":0.25}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":40,"rate":0.8},{"type":"Pentagon","quantity":28,"rate":0.5},{"type":"BetaPentagon","quantity":5,"rate":0.25},{"type":"BetaTriangle","quantity":7,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":3,"rate":0.3},{"type":"AlphaTriangle","quantity":1,"rate":1}],
+  [{"type":"Normal","quantity":130,"rate":0.8},{"type":"Triangle","quantity":50,"rate":0.8},{"type":"Pentagon","quantity":30,"rate":0.6},{"type":"BetaPentagon","quantity":7,"rate":0.25},{"type":"BetaTriangle","quantity":8,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":4,"rate":0.35},{"type":"AlphaTriangle","quantity":1,"rate":0.2}],
+  [{"type":"Normal","quantity":140,"rate":0.8},{"type":"Triangle","quantity":60,"rate":0.8},{"type":"Pentagon","quantity":32,"rate":0.7},{"type":"BetaPentagon","quantity":9,"rate":0.25},{"type":"BetaTriangle","quantity":9,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":5,"rate":0.4},{"type":"AlphaTriangle","quantity":1,"rate":0.22}],
+  [{"type":"Normal","quantity":150,"rate":0.8},{"type":"Triangle","quantity":75,"rate":0.8},{"type":"Pentagon","quantity":34,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.25},{"type":"BetaTriangle","quantity":10,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":5,"rate":0.45},{"type":"AlphaTriangle","quantity":1,"rate":0.24}],
+
+  [{"type":"Normal","quantity":160,"rate":0.8},{"type":"Triangle","quantity":80,"rate":0.8},{"type":"Pentagon","quantity":36,"rate":0.8},{"type":"BetaPentagon","quantity":12,"rate":0.3},{"type":"BetaTriangle","quantity":10,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":5,"rate":0.45},{"type":"AlphaTriangle","quantity":1,"rate":0.26}],
+  [{"type":"Normal","quantity":170,"rate":0.8},{"type":"Triangle","quantity":85,"rate":0.8},{"type":"Pentagon","quantity":38,"rate":0.8},{"type":"BetaPentagon","quantity":14,"rate":0.3},{"type":"BetaTriangle","quantity":11,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":5,"rate":0.5},{"type":"AlphaTriangle","quantity":1,"rate":0.28}],
+  [{"type":"Normal","quantity":180,"rate":0.8},{"type":"Triangle","quantity":90,"rate":0.8},{"type":"Pentagon","quantity":40,"rate":0.8},{"type":"BetaPentagon","quantity":16,"rate":0.3},{"type":"BetaTriangle","quantity":12,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":5,"rate":0.55},{"type":"AlphaTriangle","quantity":1,"rate":0.3},{"type":"AlphaSquare","quantity":1,"rate":1}],
+  [{"type":"Normal","quantity":190,"rate":0.8},{"type":"Triangle","quantity":95,"rate":0.8},{"type":"Pentagon","quantity":45,"rate":0.8},{"type":"BetaPentagon","quantity":18,"rate":0.3},{"type":"BetaTriangle","quantity":13,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":5,"rate":0.6},{"type":"AlphaTriangle","quantity":1,"rate":0.3},{"type":"AlphaSquare","quantity":1,"rate":0.3}],
+  [{"type":"Normal","quantity":200,"rate":0.8},{"type":"Triangle","quantity":100,"rate":0.8},{"type":"Pentagon","quantity":80,"rate":0.8},{"type":"BetaPentagon","quantity":20,"rate":0.5},{"type":"BetaTriangle","quantity":14,"rate":0.2},{"type":"BetaSquare","quantity":6,"rate":0.2},{"type":"AlphaPentagon","quantity":6,"rate":0.5},{"type":"AlphaTriangle","quantity":1,"rate":0.3},{"type":"AlphaSquare","quantity":1,"rate":0.3}],
+
+
+
+
+  [{"type":"Normal","quantity":80,"rate":0.8},{"type":"Triangle","quantity":160,"rate":0.8},{"type":"Pentagon","quantity":40,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":10,"rate":0.8},{"type":"BetaSquare","quantity":10,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":1,"rate":0.5},{"type":"AlphaSquare","quantity":1,"rate":0.5}],
+  [{"type":"Normal","quantity":90,"rate":0.8},{"type":"Triangle","quantity":180,"rate":0.8},{"type":"Pentagon","quantity":45,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":12,"rate":0.8},{"type":"BetaSquare","quantity":11,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":1,"rate":0.5},{"type":"AlphaSquare","quantity":1,"rate":0.5}],
+  [{"type":"Normal","quantity":100,"rate":0.8},{"type":"Triangle","quantity":200,"rate":0.8},{"type":"Pentagon","quantity":50,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":14,"rate":0.8},{"type":"BetaSquare","quantity":12,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":1,"rate":0.5},{"type":"AlphaSquare","quantity":1,"rate":0.5}],
+  [{"type":"Normal","quantity":110,"rate":0.8},{"type":"Triangle","quantity":220,"rate":0.8},{"type":"Pentagon","quantity":55,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":16,"rate":0.8},{"type":"BetaSquare","quantity":13,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":1,"rate":0.5},{"type":"AlphaSquare","quantity":1,"rate":0.5}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":240,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":18,"rate":0.8},{"type":"BetaSquare","quantity":14,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":1,"rate":0.5},{"type":"AlphaSquare","quantity":1,"rate":0.5}],
+
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":300,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":24,"rate":0.8},{"type":"BetaSquare","quantity":15,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":3,"rate":0.3},{"type":"AlphaSquare","quantity":3,"rate":0.3}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":340,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":26,"rate":0.8},{"type":"BetaSquare","quantity":16,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":3,"rate":0.3},{"type":"AlphaSquare","quantity":3,"rate":0.3}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":380,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":30,"rate":0.8},{"type":"BetaSquare","quantity":17,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":3,"rate":0.3},{"type":"AlphaSquare","quantity":3,"rate":0.3}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":420,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":40,"rate":0.8},{"type":"BetaSquare","quantity":18,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":3,"rate":0.3},{"type":"AlphaSquare","quantity":3,"rate":0.3}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":460,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":50,"rate":0.8},{"type":"BetaSquare","quantity":19,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":4,"rate":0.3},{"type":"AlphaSquare","quantity":3,"rate":0.3}],
+
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":550,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":60,"rate":0.8},{"type":"BetaSquare","quantity":19,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":4,"rate":0.3},{"type":"AlphaSquare","quantity":3,"rate":0.3}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":600,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":70,"rate":0.8},{"type":"BetaSquare","quantity":19,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":4,"rate":0.3},{"type":"AlphaSquare","quantity":3,"rate":0.3}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":650,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":80,"rate":0.8},{"type":"BetaSquare","quantity":19,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":4,"rate":0.3},{"type":"AlphaSquare","quantity":3,"rate":0.3}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":700,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":90,"rate":0.8},{"type":"BetaSquare","quantity":19,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":4,"rate":0.3},{"type":"AlphaSquare","quantity":3,"rate":0.3}],
+  [{"type":"Normal","quantity":120,"rate":0.8},{"type":"Triangle","quantity":1000,"rate":0.8},{"type":"Pentagon","quantity":60,"rate":0.8},{"type":"BetaPentagon","quantity":10,"rate":0.3},{"type":"BetaTriangle","quantity":120,"rate":0.8},{"type":"BetaSquare","quantity":19,"rate":0.8},{"type":"AlphaPentagon","quantity":10,"rate":0.2},{"type":"AlphaTriangle","quantity":5,"rate":0.8},{"type":"AlphaSquare","quantity":3,"rate":0.6}],
+]
+
+
+    class WaveController {
+      constructor() {
+        this.waveNumber = 0;
+        this.waveStarted = false;
+        this.waveTime = 0; //一波时长
+        this.waveTimeRemaining = 0; //一波剩余时间
+        this.waveExtraTime = 0; //一波生成结束后的额外时间，用于显示，整这玩意完全是屎山吧:|
+        this.lastFrameTime = Date.now() //上一帧的时间
+
+        this.spawnPool = []; //刷怪池
+        this.spawnInterval = 0; //一波内的单次尝试生成间隔
+        this.spawnReload = 0;
+
+        this.displayTime = 0;
+        this.displayExtraTime = 0;
+
+        this.waveStartAnimationY = -50
+      }
+
+      WaveControl() { //波数中心控制
+        if ((this.waveStartAnimationY-50)*-1 >= 0 && this.waveStartAnimationY != 50) { //借用一个变量来做标题界面消失动画
+          var startOpacity = this.waveStartAnimationY*-0.02
+          if (startOpacity < 0) {startOpacity = 0}
+          drawUbuntuCenter(500,600,"Keyboard [W]/[A]/[S]/[D] ",startOpacity,30)
+          drawUbuntuCenter(500,630,"or",startOpacity,25)
+          drawUbuntuCenter(500,660,"Joystick (Drag Screen)",startOpacity,30)
+          drawUbuntuCenter(500,200,"PeasWave",startOpacity,100)
+          drawUbuntuCenter(500,250,GameVersion,startOpacity,20)
+        }
+
+        //玩家似了或实体数量太多就只绘制
+        var player;
+        for (let i = 0; i < entities.length; i++) {
+          if (entities[i] instanceof peasPlayer) {
+            player = entities[i];
+            
+            break;
+          }
+        }
+        if (player == undefined || entities.length > 400) {
+          if (this.waveStarted == true && this.waveStartAnimationY != 50) {
+            this.waveStartAnimationY = this.waveStartAnimationY*0.95 + 50*0.05
+            if (this.waveStartAnimationY >= 49.9) {this.waveStartAnimationY = 50}
+          }
+          this.DrawWaveBar(this.waveStartAnimationY)
+          this.lastFrameTime = Date.now()
+          return;
+        }
+
+        var enemyQuantity = 0
+        for (let i = 0; i < entities.length; i++) {
+          if (entities[i] instanceof peasEnemy) {enemyQuantity += 1} //数量检测
+        };
+        if (this.waveStarted == true && this.waveTimeRemaining <= 0 && enemyQuantity == 0 || this.waveExtraTime >= this.waveTime && this.waveStarted == true) { //为0且时间结束时进入下一波
+          this.WaveReset();
+        }
+        this.waveTimeRemaining -= Date.now() - this.lastFrameTime //波数剩余时间减少
+
+        if (this.waveTimeRemaining < 0) {this.waveExtraTime = Math.abs(this.waveTimeRemaining)} else {this.waveExtraTime = 0} //时间计算
+
+        //if (this.waveStarted) this.Spawner() //生成器执行
+        this.spawnReload -= Date.now() - this.lastFrameTime //每次reloading一次
+        while (this.waveStarted && this.spawnReload <= 0) {
+          this.Spawner()
+          if (entities.length > 400) {break;}
+          this.spawnReload += this.spawnInterval
+        }
+
+        if (this.waveStarted == true && this.waveStartAnimationY != 50) {
+          this.waveStartAnimationY = this.waveStartAnimationY*0.95 + 50*0.05
+          if (this.waveStartAnimationY >= 49.9) {this.waveStartAnimationY = 50}
+        }
+        this.DrawWaveBar(this.waveStartAnimationY) //绘制波数显示器
+
+        this.lastFrameTime = Date.now()
+      }
+
+
+
+      WaveReset() {
+        this.waveNumber += 1;
+        //console.log(this.waveNumber)
+        //console.log(waveContent[this.waveNumber-1])
+        if (waveContent[this.waveNumber-1] != undefined) {this.spawnPool = [...waveContent[this.waveNumber-1]]} //将内容加入生成池
+        else { //无内容自动生成
+          this.spawnPool = [{"type":"Normal","quantity":600+(this.waveNumber-60)*10,"rate":0.8},{"type":"Triangle","quantity":400+(this.waveNumber-60)*5,"rate":0.8},{"type":"Pentagon","quantity":50+(this.waveNumber-60)*5,"rate":0.8},{"type":"BetaPentagon","quantity":20+(this.waveNumber-60)*10,"rate":0.8},{"type":"BetaTriangle","quantity":50+(this.waveNumber-60)*5,"rate":0.8},{"type":"BetaSquare","quantity":20+(this.waveNumber-60)*2,"rate":0.8},{"type":"AlphaPentagon","quantity":5+(this.waveNumber-60)*2,"rate":0.5},{"type":"AlphaTriangle","quantity":5+(this.waveNumber-60)*1,"rate":0.5},{"type":"AlphaSquare","quantity":3+(this.waveNumber-60)*0.8,"rate":0.5},{"type":"OmegaPentagon","quantity":(this.waveNumber-60)*3,"rate":(this.waveNumber-60)*0.01},{"type":"OmegaSquare","quantity":(this.waveNumber-60)*2,"rate":(this.waveNumber-60)*0.01},{"type":"OmegaTriangle","quantity":(this.waveNumber-60)*3,"rate":(this.waveNumber-60)*0.01}]
+        }
+
+        //console.log(this.spawnPool)
+        this.waveTime = 10000 + this.waveNumber*300;
+        this.waveTimeRemaining = this.waveTime;
+
+        var waveMobCount = 0;
+        for (let i = 0; i < this.spawnPool.length; i++) {
+          waveMobCount += this.spawnPool[i].quantity //计算一波内实体数量
+        }
+        this.spawnInterval = this.waveTime / waveMobCount //生成间隔设置
+        this.spawnReload = 0
+        
+        if (this.waveNumber >= 16 && this.waveNumber <= 30) {canvas.style.backgroundColor = "#ebfaf2";canvas.style.borderColor = "#7ab898"}
+        else if (this.waveNumber >= 31 && this.waveNumber <= 45) {canvas.style.backgroundColor = "#fafaeb";canvas.style.borderColor = "#c9c982"}
+        else if (this.waveNumber >= 46 && this.waveNumber <= 60) {canvas.style.backgroundColor = "#faeceb";canvas.style.borderColor = "#d19894"}
+        else if (this.waveNumber >= 61) {canvas.style.backgroundColor = "#d9d9d9";canvas.style.borderColor = "#8c8c8c"}
+
+      }
+      Spawner() { //WHAT. SUMONS?////////////////////////////////////////////////////////////////////
+        if (this.spawnReload <= 0) {
+
+          //旧的随机索引，bad!
+          //var indices = [];
+          //for (let i = 0; i < this.spawnPool.length; i++) {
+          //  if (this.spawnPool[i].quantity >= 1) indices.push(i); //大于1的生成池索引放在里面
+          //}
+          //if (indices.length === 0) return;
+
+          //const randomSpawn = indices[Math.floor(Math.random() * indices.length)]; //随机一个
+          //console.log("spawned "+ this.spawnPool[randomSpawn].type)
+
+          //根据数量平均生成
+          let totalQuantity = 0;
+          for (let i = 0; i < this.spawnPool.length; i++) {
+              if (this.spawnPool[i].quantity > 0) {
+                  totalQuantity += this.spawnPool[i].quantity;
+              }
+          }
+          if (totalQuantity <= 0) return;
+
+          let rand = Math.floor(Math.random() * totalQuantity);
+          let randomSpawn = 0;
+          for (let i = 0; i < this.spawnPool.length; i++) {
+              if (this.spawnPool[i].quantity > 0) {
+                  if (rand < this.spawnPool[i].quantity) {
+                      randomSpawn = i;
+                      break;
+                  }
+                  rand -= this.spawnPool[i].quantity;
+              }
+          }
+
+          //生成
+          const position = randomSpawnPoint()
+          if (Math.random() <= this.spawnPool[randomSpawn].rate) this.spawnEnemy(position.x,position.y,this.spawnPool[randomSpawn].type)
+
+          this.spawnPool[randomSpawn].quantity -= 1
+          //this.spawnReload += this.spawnInterval //在控制方法已经减去
+        }
+      }
+
+      DrawWaveBar(drawY) { //绘制波数显示板
+        this.displayTime = this.waveTimeRemaining*0.4 + this.displayTime*0.6;
+        this.displayExtraTime = this.waveExtraTime*0.4 + this.displayExtraTime*0.6; //这个可以丝滑一点√
+
+        ctx.save()
+
+        const centerX = canvas.width/2;
+        //const drawY = 50;
+        drawUbuntuCenter(centerX,drawY,"Wave " + this.waveNumber,1,40); //Wave数显示
+
+        const startPointsX = centerX - canvas.width*0.12;
+        const lineLength = canvas.width*0.24;
+        const progressBarY = drawY + 32; //wave百分比条绘制的y轴坐标
+
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath(); //条底
+        ctx.moveTo(startPointsX,progressBarY);
+        ctx.lineTo(startPointsX+lineLength,progressBarY)
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 26;
+        ctx.strokeStyle = "#202020";
+        ctx.stroke();
+
+        var progressLength; //Wave生成进度条
+        if (this.displayTime >= 0) {
+          progressLength = lineLength * (this.waveTime-this.displayTime)/this.waveTime
+        } else {progressLength = lineLength}
+        var waveBarColor;
+        if (this.waveNumber <= 15) {waveBarColor = "#eeeeee"}
+        else if (this.waveNumber >= 16 && this.waveNumber <= 30) {waveBarColor = "#5fd397"}
+        else if (this.waveNumber >= 31 && this.waveNumber <= 45) {waveBarColor = "#d3d35f"}
+        else if (this.waveNumber >= 46 && this.waveNumber <= 60) {waveBarColor = "#d3675f"}
+        else if (this.waveNumber >= 61) {waveBarColor = "#8c8c8c"}
+        var drawGlobalAlpha = Math.min(progressLength/lineLength*100,0.8)
+        ctx.globalAlpha = drawGlobalAlpha;
+        ctx.beginPath();
+        ctx.moveTo(startPointsX,progressBarY);
+        ctx.lineTo(startPointsX+progressLength,progressBarY)
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.min(progressLength/lineLength*2000,18);
+        ctx.strokeStyle = waveBarColor;
+        ctx.stroke();
+
+        var extraTimeLength; //Wave剩余时间进度条
+        if (this.displayExtraTime >= 0) {
+          progressLength = Math.min(lineLength * this.displayExtraTime/this.waveTime,lineLength)
+        } else {progressLength = lineLength}
+        var waveBarColor;
+        waveBarColor = "#ff3224"
+        const drawExtraTimeGlobalAlpha = Math.min(progressLength/lineLength*100,0.8)
+        ctx.globalAlpha = drawExtraTimeGlobalAlpha;
+        ctx.beginPath();
+        ctx.moveTo(startPointsX,progressBarY);
+        ctx.lineTo(startPointsX+progressLength,progressBarY)
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.min(progressLength/lineLength*2000,14);
+        ctx.strokeStyle = waveBarColor;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      spawnEnemy(x,y,type) {
+        if (type == "Normal") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:0,color:"#ce4040",borderColor:"#b82828",r:12,speed:7,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:5,team:2,AI:"Chase",searchRadius:640,damage:10,maxHealth:50,exp:1})} //normal追逐敌人
+
+        else if (type == "Triangle") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:1,color:"#e67747",borderColor:"#cc6133",r:12,speed:8,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:5,team:2,AI:["Close","UseWeapon"],searchRadius:640,damage:5,maxHealth:25,weapon:EnemyWeaponBasic,exp:1})} //这是一个AI为远程射击的武器为Basic的敌人
+
+        else if (type == "Pentagon") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:3,color:"#ce4040",borderColor:"#b82828",r:35,speed:4,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.3,team:2,AI:["Chase"],searchRadius:800,damage:10,maxHealth:300,mass:10,exp:10})} //Pentagon
+
+
+        else if (type == "BetaPentagon") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:3,color:"#ce4040",borderColor:"#b82828",r:60,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.2,team:2,AI:["Chase"],searchRadius:1200,damage:15,maxHealth:1000,mass:30,exp:100})} //BetaPentagon
+
+        else if (type == "BetaTriangle") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:1,color:"#e67747",borderColor:"#cc6133",r:20,speed:6,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.5,team:2,AI:["Close","UseWeapon"],searchRadius:1200,damage:5,maxHealth:500,mass:10,weapon:EnemyWeaponTripleShot,exp:100})}
+
+        else if (type == "BetaSquare") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:2,color:"#f8e37c",borderColor:"#dfc95d",r:30,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.5,team:2,AI:["Close","UseWeapon"],searchRadius:800,damage:5,maxHealth:300,mass:10,weapon:EnemyWeaponBetaSummoner,exp:100})}
+
+
+        else if (type == "AlphaPentagon") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:3,color:"#ce4040",borderColor:"#b82828",r:120,speed:2,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.05,team:2,AI:["Chase"],searchRadius:1200,damage:15,maxHealth:5000,mass:100,exp:3000})} //BetaPentagon
+
+        else if (type == "AlphaSquare") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:2,color:"#f8e37c",borderColor:"#dfc95d",r:60,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.2,team:2,AI:["Close","UseWeapon"],searchRadius:800,damage:5,maxHealth:2000,mass:30,weapon:EnemyWeaponAlphaSummoner,exp:3000})}
+
+        else if (type == "AlphaTriangle") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:1,color:"#e67747",borderColor:"#cc6133",r:40,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.2,team:2,AI:["Close","UseWeapon"],searchRadius:800,damage:5,maxHealth:3000,mass:30,weapon:EnemyWeaponPentaShot,exp:3000})}
+
+
+        else if (type == "OmegaPentagon") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:3,color:"#ce4040",borderColor:"#b82828",r:200,speed:0.8,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.01,team:2,AI:["Chase"],searchRadius:1200,damage:20,maxHealth:40000,mass:500,exp:50000})} //BetaPentagon
+
+        else if (type == "OmegaSquare") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:2,color:"#f8e37c",borderColor:"#dfc95d",r:100,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.01,team:2,AI:["Close","UseWeapon"],searchRadius:800,damage:5,maxHealth:15000,mass:60,weapon:EnemyWeaponOmegaSummoner,exp:50000})}
+
+        else if (type == "OmegaTriangle") {SpawnEntities({ClassType:"peasEnemy",x:x,y:y,shape:1,color:"#e67747",borderColor:"#cc6133",r:60,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.01,team:2,AI:["Close","UseWeapon"],searchRadius:800,damage:5,maxHealth:20000,mass:60,weapon:EnemyWeaponHeptaShot,exp:50000})}
+      }
+
+    };
+
+
+    function randomSpawnPoint() { //what the 地狱? why u 把 this function 放 in here?///////////////////////////AMONGUSඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞඞ
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2
+      const radius = 1000; //生成位置与中心点的距离，1000防止体型巨大
+      // 随机角度 0~2π
+      const theta = Math.random() * 2 * Math.PI;
+      
+      //UwU这段没学过 问的鸡皮提
+      const x = centerX + radius * Math.cos(theta);
+      const y = centerY + radius * Math.sin(theta);
+
+      return {x,y};
+    };
+
+
+    function drawUbuntuCenter(x,y,text,opacity,height) { //随机的无步辇图绘制函数 (什么
+      ctx.save();
+      ctx.beginPath();
+      ctx.textBaseline = 'middle';
+      ctx.font = `${height}px Ubuntu`;
+      const textMetrics = ctx.measureText(text);
+      const textWidth = textMetrics.width; //字体宽获取
+
+      const displayX = (x - textWidth/2) - (textWidth/2)*0.0585; //神秘微调，这使我居中
+      const displayY = y;
+
+
+      DrawUbuntu(text,displayX,displayY,height,undefined,undefined,opacity);
+      ctx.restore()
+    };
+
+    //武器们 [0类型,1伤害,2血量,3冷却毫秒,4攻击距离,5子弹速度,6子弹大小,7子弹重量,8召唤数量,9召唤物持续时间,10子弹携带武器]
+    const WeaponBasic = ["Basic",10,20,350,200,10,8,0.25]; //基础
+    //BasicII
+    const WeaponBasicII = ["Basic",20,30,300,300,10,8,0.25]; //子弹分支
+    const WeaponSummoner = ["Summoner",8,160,1000,300,10,20,3,8] //召唤师分支
+    //Beta
+    const WeaponTripleShot = ["TripleShot",10,50,225,225,9,8,0.5]; //Beta多重
+    const WeaponBetaCannon = ["Basic",15,300,500,350,6,30,5]; //Beta加农
+    const WeaponEchoSummoner = ["Summoner",8,200,400,300,12,20,3,16] //多重召唤师//Echo/Resonance/Cascade 三个多重等级，多重射击不使用，因为他们有自己的叫法了！……什么，你说这召唤是ant egg吗？
+    const WeaponBetaSummoner = ["Summoner",8,500,1000,300,10,30,5,8]; //Beta召唤，代表巨型召唤分支
+    const WeaponDeltaSummoner = ["Stick",15,500,2000,0,12,60,5,6,12000]; //Delta召唤，代表穿透召唤分支 //Delta/Epsilon/Zeta 三个不同的穿透等级，第十个为持续时间毫秒
+    const WeaponBetaEngineerTower = ["Basic",15,20,350,300,10,10,0.25] //Beta工程师的塔的武器
+    const WeaponBetaEngineer = ["Tower",1,2500,1500,400,1,30,50,6,9000,WeaponBetaEngineerTower] //Beta工程师，Tower第11个数值为武器
+    //Alpha
+    const WeaponPentaShot = ["PentaShot",8,120,100,150,8,8,1]; //Alpha多重
+    const WeaponAlphaCannon = ["Basic",25,1600,700,400,4,100,50]; //Alpha加农
+    const WeaponAlphaSummoner = ["Summoner",5,20000,3000,300,8,60,30,6]; //Alpha召唤
+    const WeaponResonanceSummoner = ["Summoner",10,300,60,300,10,30,5,32]; //Resonance召唤
+    const WeaponEpsilonSummoner = ["Stick",20,5000,5000,0,12,100,1,4,20000] //Epsilon召唤
+    const WeaponAlphaEngineerTower = ["Basic",40,20,150,400,10,10,0.25] //Alpha工程师的塔的武器
+    const WeaponAlphaEngineer = ["Tower",1,7500,1500,400,1,40,50,6,9000,WeaponAlphaEngineerTower] //Alpha工程师
+    //Omega
+    const WeaponHeptaShot = ["HeptaShot",10,500,80,200,8,8,1]; //Omega多重
+    const WeaponOmegaCannon = ["Basic",50,10000,1000,800,4,200,500]; //Omega加农
+    const WeaponOmegaSummoner = ["Summoner",40,30000,3000,500,6,100,1080,6]; //Omega召唤
+    const WeaponCascadeSummoner = ["Summoner",40,300,10,300,10,50,5,32]; //Cascade召唤
+    const WeaponZetaSummoner = ["Stick",40,100000,10000,0,12,240,1,2,20000]; //Zeta召唤
+    const WeaponOmegaEngineerTower = ["Basic",100,100,80,500,14,10,0.25]
+    const WeaponOmegaEngineer = ["Tower",1,1000000,1500,400,1,160,50,6,9000,WeaponOmegaEngineerTower] //Omega工程师
+    
+    
+    const startWeapon = WeaponBasic
+
+    //随机升级表
+    const BasicUpgradeTree = ["BasicII","Summoner"] //rammer在别的地方
+
+    const BasicIIUpgradeTree = ["TripleShot","BetaCannon"]
+    const SummonerUpgradeTree = ["BetaSummoner","EchoSummoner","DeltaSummoner","BetaEngineer"]
+
+    const TripleShotUpgradeTree = ["PentaShot"]
+    const BetaCannonUpgradeTree = ["AlphaCannon"]
+    const EchoSummonerUpgradeTree = ["ResonanceSummoner"]
+    const BetaSummonerUpgradeTree = ["AlphaSummoner"]
+    const DeltaSummonerUpgradeTree = ["EpsilonSummoner"]
+    const BetaEngineerUpgradeTree = ["AlphaEngineer"]
+
+    const PentaShotUpgradeTree = ["HeptaShot"]
+    const AlphaCannonUpgradeTree = ["OmegaCannon"]
+    const ResonanceSummonerUpgradeTree = ["CascadeSummoner"]
+    const AlphaSummonerUpgradeTree = ["OmegaSummoner"]
+    const EpsilonSummonerUpgradeTree = ["ZetaSummoner"]
+    const AlphaEngineerUpgradeTree = ["OmegaEngineer"]
+
+
+    class PlayerLevel { //玩家等级系统
+      constructor() {
+        this.level = 0;
+        this.upgradeRequiredEXP = 4;
+        this.exp = 0;
+        this.playerUpgradeLevel = 0;
+        this.playerWeaponName = "Basic"; //初始一定是basic
+
+        this.drawY = 100; //波数未开始时
+        this.displayExp = 0;
+      }
+
+      LevelSystem() {
+        if (this.exp >= this.upgradeRequiredEXP) this.PlayerLevelUp();
+        if (this.drawY != 0) {
+          if (WaveControlSystem.waveStarted) this.drawY *= 0.9
+          if (this.drawY < 0.001) {this.drawY = 0}
+        }
+        this.DrawLevelBar();
+      }
+
+      PlayerLevelUp() {
+        this.exp -= this.upgradeRequiredEXP;
+        this.upgradeRequiredEXP *= 1.22;
+        this.level += 1;
+        //console.log("level up")
+        this.UpgradeLevelUp()
+        
+      }
+      UpgradeLevelUp() {
+        if (this.level >= 5 && this.playerUpgradeLevel == 0 || this.level >= 15 && this.playerUpgradeLevel == 1 || this.level >= 30 && this.playerUpgradeLevel == 2 || this.level >= 45 && this.playerUpgradeLevel == 3) {
+
+          var SelectUpgrade;
+          if (this.playerWeaponName == "Basic") {SelectUpgrade = (Math.random() > 0.95) ? ["Rammer"] : BasicUpgradeTree} //哇哦，抽到rammer就是欧皇了
+          else if (this.playerWeaponName == "BasicII") {SelectUpgrade = BasicIIUpgradeTree}
+          else if (this.playerWeaponName == "Summoner") {SelectUpgrade = SummonerUpgradeTree}
+          else if (this.playerWeaponName == "TripleShot") {SelectUpgrade = TripleShotUpgradeTree}
+          else if (this.playerWeaponName == "BetaCannon") {SelectUpgrade = BetaCannonUpgradeTree}
+          else if (this.playerWeaponName == "BetaSummoner") {SelectUpgrade = BetaSummonerUpgradeTree}
+          else if (this.playerWeaponName == "EchoSummoner") {SelectUpgrade = EchoSummonerUpgradeTree}
+          else if (this.playerWeaponName == "DeltaSummoner") {SelectUpgrade = DeltaSummonerUpgradeTree}
+          else if (this.playerWeaponName == "BetaEngineer") {SelectUpgrade = BetaEngineerUpgradeTree}
+          else if (this.playerWeaponName == "PentaShot") {SelectUpgrade = PentaShotUpgradeTree}
+          else if (this.playerWeaponName == "AlphaCannon") {SelectUpgrade = AlphaCannonUpgradeTree}
+          else if (this.playerWeaponName == "ResonanceSummoner") {SelectUpgrade = ResonanceSummonerUpgradeTree}
+          else if (this.playerWeaponName == "AlphaSummoner") {SelectUpgrade = AlphaSummonerUpgradeTree}
+          else if (this.playerWeaponName == "EpsilonSummoner") {SelectUpgrade = EpsilonSummonerUpgradeTree}
+          else if (this.playerWeaponName == "AlphaEngineer") {SelectUpgrade = AlphaEngineerUpgradeTree}
+
+          else if (this.playerWeaponName == "Rammer") {SelectUpgrade = ["BetaRammer"]}
+          else if (this.playerWeaponName == "BetaRammer") {SelectUpgrade = ["AlphaRammer"]}
+          else if (this.playerWeaponName == "AlphaRammer") {SelectUpgrade = ["OmegaRammer"]}
+
+
+          this.WeaponChange(SelectUpgrade[Math.floor(Math.random()*SelectUpgrade.length)]) //随机一个
+        }
+      }
+      WeaponChange(Upgrade) {
+        //console.log(Upgrade)
+        this.playerWeaponName = Upgrade
+        this.playerUpgradeLevel += 1
+
+        var player;
+        for (let i = 0; i < entities.length; i++) { //获取一个玩家，所以仅对最先生成的玩家生效！
+          if (entities[i] instanceof peasPlayer) {
+            player = entities[i];
+            break;
+          }
+        }
+        if (player == undefined) return;
+
+        var UpgradeStats; //体伤 血量 回血 半径 移速 加速度 减速度 重量 形状，我的发
+        if (Upgrade == "BasicII") {UpgradeStats = [WeaponBasicII,[10,100,10,12,8,0.15,0.85,1,0]]}
+        if (Upgrade == "Summoner") {UpgradeStats = [WeaponSummoner,[10,100,15,12,8,0.15,0.85,1,2]]}
+
+        if (Upgrade == "TripleShot") {UpgradeStats = [WeaponTripleShot,[10,200,20,12,8,0.15,0.85,1,1]]}
+        if (Upgrade == "BetaCannon") {UpgradeStats = [WeaponBetaCannon,[10,200,20,12,8,0.15,0.85,1,0]]}
+        if (Upgrade == "BetaSummoner") {UpgradeStats = [WeaponBetaSummoner,[10,200,30,12,8,0.15,0.85,1,2]]}
+        if (Upgrade == "EchoSummoner") {UpgradeStats = [WeaponEchoSummoner,[10,200,20,12,8,0.15,0.85,1,2]]}
+        if (Upgrade == "DeltaSummoner") {UpgradeStats = [WeaponDeltaSummoner,[5,300,30,12,8,0.15,0.85,1,2]]}
+        if (Upgrade == "BetaEngineer") {UpgradeStats = [WeaponBetaEngineer,[10,200,20,12,8,0.15,0.85,1,2]]}
+
+        if (Upgrade == "PentaShot") {UpgradeStats = [WeaponPentaShot,[10,500,50,12,8,0.15,0.85,1,1]]}
+        if (Upgrade == "AlphaCannon") {UpgradeStats = [WeaponAlphaCannon,[10,500,50,12,8,0.15,0.85,1,0]]}
+        if (Upgrade == "ResonanceSummoner") {UpgradeStats = [WeaponResonanceSummoner,[10,500,50,12,8,0.15,0.85,1,2]]}
+        if (Upgrade == "AlphaSummoner") {UpgradeStats = [WeaponAlphaSummoner,[10,500,50,12,8,0.15,0.85,1,2]]}
+        if (Upgrade == "EpsilonSummoner") {UpgradeStats = [WeaponEpsilonSummoner,[5,750,75,12,8,0.15,0.85,1,2]]}
+        if (Upgrade == "AlphaEngineer") {UpgradeStats = [WeaponAlphaEngineer,[10,500,50,12,8,0.15,0.85,1,2]]}
+
+        if (Upgrade == "HeptaShot") {UpgradeStats = [WeaponHeptaShot,[10,1000,100,12,8,0.15,0.85,1,1]]}
+        if (Upgrade == "OmegaCannon") {UpgradeStats = [WeaponOmegaCannon,[10,1000,100,12,8,0.15,0.85,1,0]]}
+        if (Upgrade == "CascadeSummoner") {UpgradeStats = [WeaponCascadeSummoner,[10,1000,100,12,8,0.15,0.85,1,2]]}
+        if (Upgrade == "OmegaSummoner") {UpgradeStats = [WeaponOmegaSummoner,[10,1000,100,12,8,0.15,0.85,1,2]]}
+        if (Upgrade == "ZetaSummoner") {UpgradeStats = [WeaponZetaSummoner,[5,1500,150,12,8,0.15,0.85,1,2]]}
+        if (Upgrade == "OmegaEngineer") {UpgradeStats = [WeaponOmegaEngineer,[10,1000,100,12,8,0.15,0.85,1,2]]}
+
+        if (Upgrade == "Rammer") {UpgradeStats = [[],[15,1200,120,20,10,0.15,0.85,10,3]]}
+        if (Upgrade == "BetaRammer") {UpgradeStats = [[],[20,2000,200,28,10,0.15,0.85,15,3]]}
+        if (Upgrade == "AlphaRammer") {UpgradeStats = [[],[30,9600,960,40,12,0.15,0.85,30,5]]}
+        if (Upgrade == "OmegaRammer") {UpgradeStats = [[],[80,50000,5000,60,15,0.15,0.85,1000,5]]}
+
+        player.weapon[0] = UpgradeStats[0][0]
+        player.weapon[1] = UpgradeStats[0][1]
+        player.weapon[2] = UpgradeStats[0][2]
+        player.weapon[3] = UpgradeStats[0][3]
+        player.weapon[4] = UpgradeStats[0][4]
+        player.weapon[5] = UpgradeStats[0][5]
+        player.weapon[6] = UpgradeStats[0][6]
+        player.weapon[7] = UpgradeStats[0][7]
+        player.weapon[8] = UpgradeStats[0][8]
+        player.weapon[9] = UpgradeStats[0][9]
+        player.weapon[10] = UpgradeStats[0][10]
+        
+        player.data.damage = UpgradeStats[1][0]
+        player.data.maxHealth = UpgradeStats[1][1]
+        player.data.heal = UpgradeStats[1][2]
+        player.data.r = UpgradeStats[1][3]
+        player.data.speed = UpgradeStats[1][4]
+        player.data.accSpeed = UpgradeStats[1][5]
+        player.data.decSpeed = UpgradeStats[1][6]
+        player.data.mass = UpgradeStats[1][7]
+        player.style.shape = UpgradeStats[1][8]
+      }
+      DrawLevelBar() {
+        this.displayExp = this.displayExp*0.9 + this.exp*0.1;
+
+        const centerX = canvas.width/2; //canvas中心点
+        const startPointsX = centerX - canvas.width*0.15; //绘制起始点
+        const lineLength = canvas.width*0.3; //条底起始点到终点的长度
+        const levelBarY = canvas.height -24 + this.drawY; //绘制的Y坐标
+        ctx.save()
+
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath(); //条底
+        ctx.moveTo(startPointsX,levelBarY);
+        ctx.lineTo(startPointsX+lineLength,levelBarY)
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 30;
+        ctx.strokeStyle = "#202020";
+        ctx.stroke();
+
+        var expLength; //经验条
+        if (this.exp >= 0) {
+          expLength = lineLength * this.displayExp/this.upgradeRequiredEXP
+        } else {expLength = lineLength}
+        if (expLength > lineLength) expLength =  lineLength
+        var drawGlobalAlpha = Math.min(expLength/lineLength*100,1)
+        ctx.globalAlpha = drawGlobalAlpha;
+        ctx.beginPath();
+        ctx.moveTo(startPointsX,levelBarY);
+        ctx.lineTo(startPointsX+expLength,levelBarY)
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.min(expLength/lineLength*4000,22);
+        ctx.strokeStyle = "#fff261";
+        ctx.stroke();
+
+        drawUbuntuCenter(centerX,levelBarY-34,this.playerWeaponName,1,30)
+        drawUbuntuCenter(centerX,levelBarY+1,"Level " + this.level,1,20)
+
+        //drawUbuntuCenter(centerX,drawY,"Wave " + this.waveNumber,1,40); //Wave数显示
+
+        ctx.restore();
+      }
+    }
+
+
+
+
+    //是否碰撞
+    function checkCircleCollision(a, b) {
+      if (a.isDying || b.isDying) return false;
+      // 计算两圆心距离
+      const dx = a.position.x - b.position.x;
+      const dy = a.position.y - b.position.y;
+      const distance = Math.hypot(dx, dy); // 勾股定理求距离
+
+      // 碰撞条件：距离 < 两半径之和
+      const minCollisionDistance = a.data.r + b.data.r;
+      return distance < minCollisionDistance;
+    }
+
+    function isInstanceOrParentInList(instance, classNames) {
+      let current = instance;
+      // 遍历实例本身及所有父类
+      while (current) {
+        const className = current.constructor.name;
+        if (classNames.includes(className)) {
+          return true;
+        }
+        current = Object.getPrototypeOf(current);
+      }
+      return false;
+    }
+
+    //碰撞处理函数
+    function resolveCollision(a,b) {
+      // 计算碰撞法线方向（两圆心连线的单位向量）
+      var dx, dy
+      if (a instanceof movableEntity && b instanceof movableEntity) {
+        dx = b.position.x - a.position.x;
+        dy = b.position.y - a.position.y;
+      } else if (a instanceof movableEntity) {
+        dx = b.position.x - a.position.x;
+        dy = b.position.y - a.position.y;
+      } else if (b instanceof movableEntity) {
+        dx = b.position.x - a.position.x;
+        dy = b.position.y - a.position.y;
+      };
+      const distance = Math.hypot(dx, dy);
+      if (distance === 0) return; // 避免除以0（重合时跳过）
+      const normalX = dx / distance; // 法线x分量（单位向量）
+      const normalY = dy / distance; // 法线y分量（单位向量）
+
+      // 1. 反弹逻辑：沿法线方向反射速度
+      // 对可移动实体（movableEntity）应用反弹
+      if (a instanceof movableEntity && b instanceof movableEntity) {
+        // 两个可移动实体：速度沿法线方向互换分量
+        var aSpeedNormal = a.vector.x * normalX + a.vector.y * normalY;
+        var bSpeedNormal = b.vector.x * normalX + b.vector.y * normalY;
+        if (a instanceof bullet) {bSpeedNormal *= 0.2};
+        if (b instanceof bullet) {aSpeedNormal *= 0.2};
+
+        let aMomentumRatio = 0.9;  // a获得b的动量比例
+        let bMomentumRatio = 0.9;  // b获得a的动量比例
+
+        if (a.data.mass > b.data.mass) {
+            aMomentumRatio *= b.data.mass / a.data.mass;  // a只获得部分动量
+        }
+
+        if (b.data.mass > a.data.mass) {
+            bMomentumRatio *= a.data.mass / b.data.mass;  // b只获得部分动量
+        }
+
+        // 交换法线方向速度（简化的弹性碰撞） 添加mass影响
+        if (isInstanceOrParentInList(b,a.data.beCollided)) {
+          a.vector.x += (bSpeedNormal - aSpeedNormal) * normalX * aMomentumRatio;
+          a.vector.y += (bSpeedNormal - aSpeedNormal) * normalY * aMomentumRatio;
+          // 应用b的额外击退
+          if (a.data.team != b.data.team && !(a instanceof bullet)) {
+            a.vector.x -= b.data.extraKnockback * normalX * b.data.mass / a.data.mass; //击退直接根据mass比例乘，不与碰撞逻辑相同
+            a.vector.y -= b.data.extraKnockback * normalY * b.data.mass / a.data.mass;
+          }
+        };
+        if (isInstanceOrParentInList(a,b.data.beCollided)) {
+          b.vector.x += (aSpeedNormal - bSpeedNormal) * normalX * bMomentumRatio;
+          b.vector.y += (aSpeedNormal - bSpeedNormal) * normalY * bMomentumRatio;
+          // 应用a的额外击退
+          if (b.data.team != a.data.team && !(b instanceof bullet)) {
+            b.vector.x -= a.data.extraKnockback * -normalX * a.data.mass / b.data.mass;
+            b.vector.y -= a.data.extraKnockback * -normalY * a.data.mass / b.data.mass;
+          }
+        };
+      } else if (a instanceof movableEntity) {
+        // 实体a可移动，实体b不可移动（如障碍物）
+        const aSpeedNormal = a.vector.x * normalX + a.vector.y * normalY;
+        // 反向法线方向速度（乘以反弹系数）
+        if (isInstanceOrParentInList(b,a.data.beCollided)) {
+          a.vector.x -= 2 * aSpeedNormal * normalX;
+          a.vector.y -= 2 * aSpeedNormal * normalY;
+          // 应用b的额外击退（如果b有）
+          if (b.data && b.data.extraKnockback) {
+            a.vector.x -= b.data.extraKnockback * normalX / a.data.mass;
+            a.vector.y -= b.data.extraKnockback * normalY / a.data.mass;
+          }
+        }
+      } else if (b instanceof movableEntity) {
+        // 实体b可移动，实体a不可移动（如障碍物）
+        const bSpeedNormal = b.vector.x * normalX + b.vector.y * normalY;
+        if (isInstanceOrParentInList(a,b.data.beCollided)) {
+          b.vector.x -= 2 * bSpeedNormal * normalX;
+          b.vector.y -= 2 * bSpeedNormal * normalY;
+          // 应用a的额外击退（如果a有）
+          if (a.data && a.data.extraKnockback) {
+            b.vector.x += a.data.extraKnockback * normalX / b.data.mass;
+            b.vector.y += a.data.extraKnockback * normalY / b.data.mass;
+          }
+        }
+      }
+
+      // 3. 位置修正：避免实体卡住（将重叠部分推开）
+      var overlap = 0.5 * (a.data.r + b.data.r - distance + 0.1); // +1
+
+      if (!(a instanceof movableEntity) || !(b instanceof movableEntity)) {
+        overlap = overlap; // 不可移动实体不位移，可移动实体完全修正
+      } else {
+        overlap = overlap * 0.5; // 双方可移动时各修正一半
+        if (a instanceof bullet || b instanceof bullet) {overlap *= 0.2}
+      }
+      //a可移动时移动a
+      if (a instanceof movableEntity) {
+        if (isInstanceOrParentInList(b,a.data.beCollided)) {
+          a.position.x -= overlap * normalX;
+          a.position.y -= overlap * normalY;
+        }
+      };
+      //b可移动时移动b
+      if (isInstanceOrParentInList(a,b.data.beCollided)) {
+        b.position.x += overlap * normalX;
+        b.position.y += overlap * normalY;
+      }
+
+    }
+    //碰撞逻辑区
+    function runEntityCollisionAI(entityA,entityB) {
+      if (entityA instanceof normalEntity) {
+
+      } else if (entityA instanceof unMovableEntity) {
+        entityA.runCollisionAI(entityB)
+      } else if (entityA instanceof peasPlayer) {
+        entityA.runCollisionAI(entityB)
+      }
+    };
+    function runEntitiesCollisionAI(entityA,entityB) { //执行碰撞时触发的逻辑
+      runEntityCollisionAI(entityA,entityB)
+      runEntityCollisionAI(entityB,entityA)
+    };
+
+    //碰撞伤害区
+    function collisionDamage(entityA,entityB) { //实体碰撞时互相造成的伤害
+      var damage = entityA.data.damage / entityB.data.maxHealth; //伤害百分比
+      if (damage < 0) {damage = 0}; //造成伤害小于0时设为0
+      var effectIntensity = damage*25; //碰撞效果为造成的伤害百分比*15
+      if (effectIntensity > 1) {effectIntensity = 1}; //效果大于1时设为1
+      entityB.data.health -= damage //血量减去伤害
+
+      entityB.style.damageEffect = effectIntensity //碰撞特效
+
+      effectTime = (entityB.style.redHealthBar - entityB.data.health)*10
+      if (effectTime>1) {effectTime=1};
+      entityB.style.redHealthBarTime = Date.now() + 300 * effectTime //红底结束持续时间
+    };
+
+    function removeEntity(entity) {
+      // 从实体数组中找到并移除该实体
+      const index = entities.findIndex(e => e === entity);
+      if (index !== -1) {
+        // 如果实体有清理方法，调用它（如移除DOM元素、取消事件监听等）//?豆包这是何意，也许以后有用吧
+        if (typeof entity.destroy === 'function') {
+          entity.destroy();
+        }
+        
+        // 从数组中删除
+        entities.splice(index, 1);
+      }
+    }
+
+    //处理碰撞
+    function handleCollisions() {
+      // 遍历所有实体对（避免重复检测，i < j）
+      for (let i = 0; i < entities.length; i++) {
+        const a = entities[i];
+        for (let j = i + 1; j < entities.length; j++) {
+          const b = entities[j];
+          // 检测碰撞，若碰撞则处理响应
+          if (checkCircleCollision(a, b)) { //不同队伍碰撞时逻辑
+            if (a.data.team != b.data.team) { 
+              //a.style.damageEffect = 0.8; //触发特效
+              //b.style.damageEffect = 0.8;
+              collisionDamage(a,b); //碰撞扣血
+              collisionDamage(b,a);
+            }
+
+            //碰撞逻辑
+            runEntitiesCollisionAI(a,b)
+
+
+
+            resolveCollision(a,b);
+          }
+          //死亡时效果
+          // 死亡检测：标记死亡状态而非立即删除
+          if (a.data.health < 0 && !a.isDying) {
+            a.isDying = true; // 标记为死亡中
+            a.data.moving = false; // 停止移动
+            a.style.damageEffect = 0;
+            if (a instanceof peasEnemy) {PlayerLevelSystem.exp += a.exp; a.exp = 0} //怪似了！exp++！
+          }
+          if (b.data.health < 0 && !b.isDying) {
+            b.isDying = true;
+            b.data.moving = false;
+            b.style.damageEffect = 0;
+            if (b instanceof peasEnemy) {PlayerLevelSystem.exp += b.exp; b.exp = 0} //怪似了！exp++！
+          }
+          //if (a.data.health < 0) {removeEntity(a)}
+          //if (b.data.health < 0) {removeEntity(b)}
+        }
+      }
+    }
+
+    function entitiesHealing() { //实体回血
+      for (let i = 0; i < entities.length; i++) {
+        if (entities[i].data.health < entities[i].data.maxHealth) {
+          var heal = entities[i].data.heal / entities[i].data.maxHealth / targetFps;
+          entities[i].data.health += heal;
+          if (entities[i].data.health > 1) {entities[i].data.health = 1}
+        }
+      }
+    };
+
+    //实体生成
+    var entities = [];
+    function SpawnEntities({ClassType,x,y,vectorX=0,vectorY=0,shape,color,borderColor,r,rotation=0,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team=0,AI=[],searchRadius,mass=1,damage=0,maxHealth=Infinity,health=1,heal=0,existenceTime=0,weapon=[],spawnBy=null,displayingText=[],exp=0}) {  // 接收extraKnockback参数
+      //console.log("Spawned " + ClassType)
+      if (ClassType == "peasPlayer") {
+        entities.push(new peasPlayer(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,AI,damage,maxHealth,health,heal,weapon));  // 传递给构造函数
+      }
+      else if (ClassType == "normalEntity") {
+        entities.push(new normalEntity(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,mass,AI,damage,maxHealth,health,heal,weapon));  // 传递给构造函数
+      }
+      else if (ClassType == "peasEnemy") {
+        entities.push(new peasEnemy(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback,team,AI,searchRadius,mass,damage,maxHealth,health,heal,weapon,exp));  // 传递给构造函数
+      }
+      else if (ClassType == "unMovableEntity") {
+        entities.push(new unMovableEntity(x,y,shape,color,borderColor,r,rotation,extraKnockback,team,AI,damage,maxHealth,health,heal,weapon,displayingText,mass,speed,accSpeed,decSpeed));
+      }
+      else if (ClassType == "friendlyUnMovableEntity") {
+        entities.push(new friendlyUnMovableEntity(x,y,shape,color,borderColor,r,rotation,extraKnockback,team,damage,maxHealth,health,heal,weapon));
+      } 
+      else if (ClassType == "playerBullet") {
+        entities.push(new playerBullet(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=AI,damage,maxHealth,health,heal,existenceTime,weapon));
+      }
+      else if (ClassType == "enemyBullet") {
+        entities.push(new enemyBullet(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=AI,damage,maxHealth,health,heal,existenceTime,weapon));
+      }
+      else if (ClassType == "playerSpawn") {
+        entities.push(new playerSpawn(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=AI,damage,maxHealth,health,heal,existenceTime,weapon,spawnBy));
+      }
+      else if (ClassType == "enemySpawn") {
+        entities.push(new enemySpawn(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=AI,damage,maxHealth,health,heal,existenceTime,weapon,spawnBy));
+      }
+      else if (ClassType == "playerPenetrateSpawn") {
+        entities.push(new playerPenetrateSpawn(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=AI,damage,maxHealth,health,heal,existenceTime,weapon,spawnBy));
+      }
+      else if (ClassType == "enemyPenetrateSpawn") {
+        entities.push(new enemyPenetrateSpawn(x,y,vectorX,vectorY,shape,color,borderColor,r,rotation,speed,accSpeed,decSpeed,beCollided,extraKnockback=0,team,mass,AI=AI,damage,maxHealth,health,heal,existenceTime,weapon,spawnBy));
+      }
+    };
+    //gameloop中执行实体逻辑
+    function runEntities(timeScale) {
+      for (let i = 0; i < entities.length; i++) {
+
+        // 处理死亡动画
+        if (entities[i].isDying) {
+          // 更新死亡计时器（基于实际帧时间）
+          entities[i].deathTimer += (1000 / targetFps) * timeScale;
+          // 计算动画进度
+          const progress = Math.min(entities[i].deathTimer / entities[i].style.deathDuration, 1);
+          
+          // 透明度随进度降低
+          entities[i].style.opacity = 1 - progress;
+          
+          // 半径随进度放大
+          entities[i].data.r = entities[i].style.originalR * (1 + progress);
+
+          // 动画结束后删除实体
+          //if (progress >= 1) {
+          //  removeEntity(entities[i]);
+            //continue; // 跳过后续逻辑 //我也不知道为什么如果不跳过就没问题
+          //}
+        };
+
+        if (entities[i] instanceof peasPlayer) { //玩家AI
+          entities[i].control();
+          entities[i].runAI();
+        } else if (entities[i] instanceof peasEnemy) { //敌人AI
+          entities[i].runAI();
+        } else if (entities[i] instanceof bullet || entities[i] instanceof spawn) { //子弹或召唤物AI
+          entities[i].runAI();
+        }
+        if (entities[i] instanceof movableEntity) {
+          entities[i].move(timeScale); // 传入时间缩放因子
+        }
+        entities[i].UseWeapon()
+        //entities[i].DrawSelf(timeScale);
+        //entities[i].DrawHealthBar()
+        
+      }
+      drawEntities(timeScale)
+
+      //上层文本
+      for (let i = 0; i < entities.length; i++) {
+        if (entities[i] instanceof unMovableEntity) {entities[i].runAI()};
+      }
+
+    }
+    //Draw笑转之冲刺办（指优化的很好）
+    function drawEntities(timeScale) {
+      // 1. 先分类所有实体（一次遍历完成）
+      const groups = {
+        spawns: [],          // 召唤物
+        others: [],          // 四类外的其他实体
+        enemies: [],         // 敌人
+        bullets: [],         // 子弹
+        players: []          // 玩家
+      };
+
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i];
+        if (entity instanceof spawn) {
+          groups.spawns.push(entity);
+        } else if (entity instanceof peasEnemy) {
+          groups.enemies.push(entity);
+        } else if (entity instanceof bullet) {
+          groups.bullets.push(entity);
+        } else if (entity instanceof peasPlayer) {
+          groups.players.push(entity);
+        } else {
+          groups.others.push(entity); // 其他未分类实体
+        }
+      }
+
+      // 2. 按层级绘制血条（与实体层级一致）
+      drawGroupHealthBars(groups.spawns);
+      drawGroupEntities(groups.spawns, timeScale);
+      drawGroupHealthBars(groups.others);
+      drawGroupHealthBars(groups.enemies);
+      drawGroupHealthBars(groups.bullets);
+
+      // 3. 按层级绘制实体
+      
+      drawGroupEntities(groups.others, timeScale);
+      drawGroupEntities(groups.enemies, timeScale);
+      drawGroupEntities(groups.bullets, timeScale);
+      drawGroupEntities(groups.players, timeScale);
+
+      // 4. 最后绘制玩家血条（保持在玩家实体上方）
+      drawGroupHealthBars(groups.players);
+    }
+    // 辅助函数：绘制一组实体的血条
+    function drawGroupHealthBars(group) {
+      for (let i = 0; i < group.length; i++) {
+        group[i].DrawHealthBar && group[i].DrawHealthBar();
+      }
+    }
+
+    // 辅助函数：绘制一组实体
+    function drawGroupEntities(group, timeScale) {
+      for (let i = 0; i < group.length; i++) {
+        group[i].DrawSelf(timeScale);
+      }
+    }
+
+    function deleteDeathEntity() {
+      for (let i = 0; i < entities.length; i++) {
+        if (entities[i].deathTimer > 100) {
+          removeEntity(entities[i])
+        }
+      }
+    }
+
+    //默认颜色：玩家绿{color:"#50a654",borderColor:"#428545"},红{color:"#ce4040",borderColor:"#b82828"},橙{color:"#e67747",borderColor:"#d86a3b"},黄{color:"#f8e37c",borderColor:"#dfc95d"},特殊色{color:"#fff261",borderColor:"#ede05a"}
+
+    //默认碰撞
+    playerCollision = ["peasPlayer","peasEnemy","normalEntity","unMovableEntity","enemyBullet","enemySpawn"]
+    normalCollision = ["peasPlayer","peasEnemy","normalEntity","unMovableEntity","friendlyUnMovableEntity","playerBullet","playerSpawn"]
+    
+
+    playerBulletCollision = ["peasEnemy","normalEntity","unMovableEntity","enemyBullet"]
+    enemyBulletCollision = ["peasPlayer","normalEntity","unMovableEntity","playerBullet"]
+
+    playerSpawnCollision = ["playerSpawn","enemySpawn","peasEnemy","normalEntity","unMovableEntity","enemyBullet"]
+    enemySpawnCollision = ["playerSpawn","enemySpawn",,"peasPlayer","peasEnemy","normalEntity","unMovableEntity","playerBullet"]
+
+    //测试武器 [类型,伤害,血量,冷却毫秒,攻击距离,子弹速度,子弹大小,子弹重量,召唤数量,召唤物持续时间,子弹携带武器]
+    /*
+    const WeaponBasic = ["Basic",10,20,350,200,10,8,0.25];
+    const WeaponPentaShot = ["PentaShot",8,30,100,150,8,8,1];
+    const WeaponBetaSummoner = ["Summoner",8,800,1000,200,10,30,5,8];
+    const WeaponAlphaSummoner = ["Summoner",5,8000,3000,200,6,60,30,2]
+    const WeaponAlphaCannon = ["Basic",25,500,700,400,4,60,10]
+    const WeaponEpsilonSummoner = ["Stick",20,1500,5000,0,12,100,1,4,20000] //Delta/Epsilon/Zeta 三个不同的穿透等级，第十个为持续时间毫秒
+    const WeaponBetaEngineerTower = ["Basic",10,25,200,300,10,12,0.25] //工程师的塔的武器
+    const WeaponBetaEngineer = ["Tower",1,5000,1500,400,1,30,50,6,9000,WeaponBetaEngineerTower] //工程师的塔，Tower第11个数值为武器
+    */
+    //玩家武器改到玩家升级系统类的代码上面了！测试武器们拜拜~
+
+    //给敌人准备的武器
+    const EnemyWeaponBasic = ["Basic",10,5,1000,400,8,8,0.25]
+    const EnemyWeaponPentaShot = ["PentaShot",10,15,150,200,5,8,0.5] 
+    const EnemyFastSummoner = ["Summoner",10,25,100,1000,3,30,5,15]
+
+    //新版本武器
+    //Basic/Penta保留
+    const EnemyWeaponTripleShot = ["TripleShot",8,8,250,250,5,8,0.5] 
+    const EnemyWeaponBetaSummoner = ["Summoner",5,25,200,600,3,20,5,8]
+
+    const EnemyWeaponAlphaSummoner = ["Summoner",5,50,100,1000,3,40,5,32]
+
+    const EnemyWeaponOmegaSummoner = ["Summoner",100,50,60,1000,3,60,5,32]
+    const EnemyWeaponHeptaShot = ["HeptaShot",15,80,80,200,6,8,0.5] 
+
+    //WTF
+    const WTFSpawning = ["Summoner",1,300,0,100,6,60,5,100]
+    const TheMoonRock = ["Summoner",1,Infinity,3000,0,1,260,1000,1]
+    const WeaponPollen = ["Stick",2,130,16.6,0,7,1,100,60,5000] //来自C418__11[doge]
+    const WTFTowerWeapon = ["Basic",1,10000,100,500,4,100,10];
+    const WTFTower = ["Tower",0,5000,10000,0,1,6,50,1,10000,WTFTowerWeapon]
+    const WTFSquare = ["Summoner",1,Infinity,10,500,500,100,100000,1,Infinity]
+
+    /* //场景1
+    SpawnEntities({ClassType:"peasPlayer",x:320,y:180,shape:0,color:"#50a654",borderColor:"#428545",r:12,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1,damage:3}) //这是一个玩家
+    SpawnEntities({ClassType:"normalEntity",x:460,y:120,shape:0,r:60,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision}) //这是一个灰球
+    SpawnEntities({ClassType:"normalEntity",x:560,y:120,shape:0,r:12,speed:15,accSpeed:0.15,decSpeed:0.99,beCollided:normalCollision}) //这是一个超级滑的灰球
+    SpawnEntities({ClassType:"normalEntity",x:200,y:100,shape:0,color:"#fdbff0",borderColor:"#e89bd8",r:30,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,extraKnockback:40,team:0}) //这是一个粉弹球
+    SpawnEntities({ClassType:"peasEnemy",x:-1000,y:200,shape:0,color:"#ce4040",borderColor:"#b82828",r:12,speed:15,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:3,team:2,AI:"Chase",searchRadius:120,damage:10,maxHealth:100}) //这是一个AI为追逐的敌人
+
+    SpawnEntities({ClassType:"peasEnemy",x:60,y:200,shape:1,color:"#ce4040",borderColor:"#b82828",r:12,speed:15,accSpeed:0.1,decSpeed:0.95,beCollided:normalCollision,extraKnockback:0,team:2,AI:"Chase",searchRadius:120,mass:0.75,damage:10,maxHealth:100}) //这是一个AI为追逐的敌人
+    SpawnEntities({ClassType:"peasEnemy",x:20,y:200,shape:2,color:"#ce4040",borderColor:"#b82828",r:12,speed:12,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:3,team:2,AI:"Chase",searchRadius:120,mass:1,damage:10,maxHealth:100}) //这是一个AI为追逐的敌人
+    SpawnEntities({ClassType:"peasEnemy",x:20,y:240,shape:3,color:"#ce4040",borderColor:"#b82828",r:12,speed:10,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:3,team:2,AI:"Chase",searchRadius:120,mass:3,damage:10,maxHealth:100}) //这是一个AI为追逐的敌人
+    SpawnEntities({ClassType:"peasEnemy",x:60,y:240,shape:4,color:"#ce4040",borderColor:"#b82828",r:12,speed:12,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:3,team:2,AI:"Chase",searchRadius:120,mass:1,damage:10,maxHealth:100}) //这是一个AI为追逐的敌人
+    SpawnEntities({ClassType:"peasEnemy",x:100,y:240,shape:5,color:"#ce4040",borderColor:"#b82828",r:12,speed:12,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:3,team:2,AI:"Chase",searchRadius:120,mass:1,damage:10,maxHealth:100}) //这是一个AI为追逐的敌人 
+
+    SpawnEntities({ClassType:"unMovableEntity",x:180,y:280,shape:0,r:30,team:0}) //这是一个障碍物
+    SpawnEntities({ClassType:"unMovableEntity",x:520,y:20,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["Debugger"]}) //这是一个Debugger障碍物
+    SpawnEntities({ClassType:"unMovableEntity",x:380,y:20,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["DrawEntityData"]}) //这是一个DrawEntityData障碍物
+    SpawnEntities({ClassType:"friendlyUnMovableEntity",x:520,y:260,shape:0,color:"#8ab1ff",borderColor:"#709cf5",r:50,extraKnockback:3,team:1}) //这是一个玩家可以躲的地方
+    //*/
+
+    /* //场景2
+    SpawnEntities({ClassType:"peasPlayer",x:320,y:180,shape:0,color:"#50a654",borderColor:"#428545",r:12,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1}) //这是一个玩家
+    SpawnEntities({ClassType:"normalEntity",x:600,y:320,shape:0,r:30,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,mass:0.5}) //这是一个mass0.5灰球
+    SpawnEntities({ClassType:"normalEntity",x:590,y:240,shape:0,r:40,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,mass:1}) //这是一个mass1灰球
+    SpawnEntities({ClassType:"normalEntity",x:580,y:140,shape:0,r:50,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,mass:2}) //这是一个mass2灰球
+    SpawnEntities({ClassType:"normalEntity",x:460,y:270,shape:0,r:80,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,mass:5}) //这是一个mass5灰球
+    SpawnEntities({ClassType:"unMovableEntity",x:40,y:320,shape:0,color:"#fdbff0",borderColor:"#e89bd8",r:20,team:0,extraKnockback:20}) //这是一个击退障碍物
+    SpawnEntities({ClassType:"normalEntity",x:30,y:30,shape:0,color:"#fdbff0",borderColor:"#e89bd8",r:20,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,extraKnockback:20,team:0,mass:0.25}) //这是一个mass0.25 击退20的粉弹球
+    SpawnEntities({ClassType:"normalEntity",x:90,y:40,shape:0,color:"#fdbff0",borderColor:"#e89bd8",r:30,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,extraKnockback:20,team:0,mass:0.5}) //这是一个mass0.5 击退20的粉弹球
+    SpawnEntities({ClassType:"normalEntity",x:170,y:50,shape:0,color:"#fdbff0",borderColor:"#e89bd8",r:40,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,extraKnockback:20,team:0,mass:1}) //这是一个mass1 击退20的粉弹球
+    SpawnEntities({ClassType:"normalEntity",x:80,y:160,shape:0,color:"#fdbff0",borderColor:"#e89bd8",r:70,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,extraKnockback:20,team:0,mass:3}) //这是一个mass3 击退20的粉弹球
+    SpawnEntities({ClassType:"peasEnemy",x:100,y:320,shape:0,color:"#ce4040",borderColor:"#b82828",r:5,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,team:2,AI:"Chase",searchRadius:30,mass:0.1}) //这是一个mass0.1的追逐敌人
+    SpawnEntities({ClassType:"peasEnemy",x:130,y:320,shape:0,color:"#ce4040",borderColor:"#b82828",r:12,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,team:2,AI:"Chase",searchRadius:30,mass:1}) //这是一个mass1的追逐敌人
+    SpawnEntities({ClassType:"peasEnemy",x:190,y:320,shape:0,color:"#ce4040",borderColor:"#b82828",r:30,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,team:2,AI:"Chase",searchRadius:20,mass:3}) //这是一个mass3的追逐敌人
+    //*/
+
+    /*//场景3
+    //SpawnEntities({ClassType:"peasPlayer",x:320,y:180,shape:5,color:"#50a654",borderColor:"#428545",r:20,speed:10,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:10,damage:15,maxHealth:2000,heal:500}) //这是一个Rammer玩家
+    //SpawnEntities({ClassType:"peasPlayer",x:320,y:180,shape:0,color:"#50a654",borderColor:"#428545",r:12,speed:8,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1,damage:10,maxHealth:300,heal:30,weapon:WeaponBasic}) //这是一个Basic玩家
+    SpawnEntities({ClassType:"peasPlayer",x:320,y:180,shape: 0,color:"#50a654",borderColor:"#428545",r:12,speed:8,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1,damage:3,maxHealth:300,heal:30,weapon:WeaponPentaShot}) //这是一个Pentashot玩家
+    //SpawnEntities({ClassType:"peasPlayer",x:320,y:180,shape:2,color:"#50a654",borderColor:"#428545",r:12,speed:8,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1,damage:3,maxHealth:300,heal:30,weapon:WeaponBetaSummoner}) //这是一个BetaSpawner玩家
+    //SpawnEntities({ClassType:"peasPlayer",x:320,y:180,shape:2,color:"#50a654",borderColor:"#428545",r:12,speed:8,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1,damage:3,maxHealth:300,heal:30,weapon:WeaponAlphaSummoner}) //这是一个AlphaSpawner玩家
+    //SpawnEntities({ClassType:"peasPlayer",x:320,y:180,shape:2,color:"#50a654",borderColor:"#428545",r:12,speed:8,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1,damage:3,maxHealth:300,heal:30,weapon:TheMoonRock}) //这是一个阴间Spawner
+    
+
+
+    SpawnEntities({ClassType:"unMovableEntity",x:620,y:20,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["Debugger"]}) //这是一个Debugger障碍物
+    SpawnEntities({ClassType:"unMovableEntity",x:620,y:340,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["DrawEntityData"]}) //这是一个DrawEntityData障碍物
+
+
+    for (var i = 0; i < 10; i++) {
+      SpawnEntities({ClassType:"peasEnemy",x:-100,y:-180+72*i,shape:0,color:"#ce4040",borderColor:"#b82828",r:12,speed:8,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:5,team:2,AI:"Chase",searchRadius:320,damage:10,maxHealth:100}) //这是一个AI为追逐的敌人
+    };
+    for (var i = 0; i < 10; i++) {
+      SpawnEntities({ClassType:"peasEnemy",x:-1000,y:-180+72*i,shape:1,color:"#ce4040",borderColor:"#b82828",r:12,speed:8,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:5,team:2,AI:["Close","UseWeapon"],searchRadius:620,damage:5,maxHealth:50,weapon:EnemyWeaponBasic}) //这是一个AI为远程射击的Basic敌人
+    };
+
+
+    SpawnEntities({ClassType:"peasEnemy",x:-400,y:180,shape:5,color:"#ce4040",borderColor:"#b82828",r:40,speed:6,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.2,team:2,AI:"Chase",searchRadius:1200,damage:20,maxHealth:500,mass:30,heal:150}) //Rammer
+
+    SpawnEntities({ClassType:"peasEnemy",x:-800,y:180,shape:3,color:"#ce4040",borderColor:"#b82828",r:120,speed:2,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.1,team:2,AI:["Chase"],searchRadius:1200,damage:20,maxHealth:1500,mass:50}) //Penta
+
+    SpawnEntities({ClassType:"peasEnemy",x:-1000,y:180,shape:1,color:"#ce4040",borderColor:"#b82828",r:30,speed:6,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.2,team:2,AI:["Close","UseWeapon"],searchRadius:1200,damage:5,maxHealth:500,mass:30,weapon:EnemyWeaponPentaShot}) //PentaShot
+
+    SpawnEntities({ClassType:"peasEnemy",x:-500,y:180,shape:2,color:"#ce4040",borderColor:"#b82828",r:50,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.2,team:2,AI:["Close","UseWeapon"],searchRadius:1200,damage:5,maxHealth:800,mass:30,weapon:EnemyFastSummoner}) //Summoner
+    //*/
+
+    /*//场景4
+    for (var i = 0; i < 100; i++) {
+      SpawnEntities({ClassType:"peasPlayer",x:320,y:180,shape:0,color:"#50a654",borderColor:"#428545",r:12,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:5,team:1,mass:1}) //这是一个玩家
+    };
+    
+    SpawnEntities({ClassType:"normalEntity",x:280,y:300,shape:0,r:40,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,mass:1}) //这是一个mass1灰球
+    SpawnEntities({ClassType:"normalEntity",x:120,y:240,shape:0,r:100,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,mass:1000}) //这是一个mass1000灰球
+    SpawnEntities({ClassType:"normalEntity",x:60,y:60,shape:0,color:"#fdbff0",borderColor:"#e89bd8",r:40,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:normalCollision,extraKnockback:20,team:0,mass:1}) //这是一个mass1 击退20的粉弹球
+    SpawnEntities({ClassType:"unMovableEntity",x:580,y:60,shape:0,r:30,team:0}) //这是一个障碍物
+    //*/
+
+    /*//模拟场景1
+    canvas.width = 1000
+    canvas.height = 1000
+
+    SpawnEntities({ClassType:"unMovableEntity",x:100,y:950,shape:2,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WTFSpawning,displayingText:["WTF SUMONS",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:50}) //这是一个ChangeWeapon障碍物
+    SpawnEntities({ClassType:"unMovableEntity",x:100,y:875,shape:2,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:TheMoonRock,displayingText:["The Moon Rock",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:50}) //这是一个ChangeWeapon障碍物
+    SpawnEntities({ClassType:"unMovableEntity",x:100,y:800,shape:2,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WTFTower,displayingText:["WTF ENGINER",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:50}) //这是一个ChangeWeapon障碍物
+    SpawnEntities({ClassType:"unMovableEntity",x:100,y:725,shape:2,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WTFSquare,displayingText:["what,",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:10,damage:0,maxHealth:30000,heal:5000}) //这是一个ChangeWeapon障碍物
+
+    SpawnEntities({ClassType:"unMovableEntity",x:900,y:950,shape:2,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WeaponPollen,displayingText:["Pollen",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:50}) //这是一个ChangeWeapon障碍物
+
+
+
+    SpawnEntities({ClassType:"peasPlayer",x:500,y:1080,shape:0,color:"#50a654",borderColor:"#428545",r:12,speed:8,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1,damage:10,maxHealth:300,heal:30,weapon:WeaponBasic,vectorY:-50}) //这是一个Basic玩家
+
+    SpawnEntities({ClassType:"unMovableEntity",x:100,y:400,shape:5,color:"#fff261",borderColor:"#ede05a",r:20,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],displayingText:["Alpha Rammer",24,1,0,-30],speed:10,accSpeed:0.15,decSpeed:0.85,mass:10,damage:15,maxHealth:2000,heal:400}) //这是一个ChangeWeapon障碍物
+
+    SpawnEntities({ClassType:"unMovableEntity",x:300,y:400,shape:1,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WeaponPentaShot,displayingText:["PentaShot",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:30}) //这是一个ChangeWeapon障碍物
+
+    SpawnEntities({ClassType:"unMovableEntity",x:500,y:400,shape:2,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WeaponBetaSummoner,displayingText:["Beta Summoner",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:30}) //这是一个ChangeWeapon障碍物
+
+    SpawnEntities({ClassType:"unMovableEntity",x:700,y:400,shape:2,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WeaponAlphaSummoner,displayingText:["Alpha Summoner",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:30}) //这是一个ChangeWeapon障碍物
+
+    SpawnEntities({ClassType:"unMovableEntity",x:700,y:500,shape:2,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WeaponEpsilonSummoner,displayingText:["Epsilon Summoner",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:30}) //这是一个ChangeWeapon障碍物
+
+    SpawnEntities({ClassType:"unMovableEntity",x:300,y:500,shape:2,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WeaponBetaEngineer,displayingText:["Beta Engineer",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:30}) //这是一个ChangeWeapon障碍物
+
+    SpawnEntities({ClassType:"unMovableEntity",x:900,y:400,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["ChangeWeapon","TextDisplay"],weapon:WeaponAlphaCannon,displayingText:["Alpha Cannon",24,1,0,-30],speed:8,accSpeed:0.15,decSpeed:0.85,mass:1,damage:3,maxHealth:300,heal:50}) //这是一个ChangeWeapon障碍物
+
+    SpawnEntities({ClassType:"unMovableEntity",x:500,y:300,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["TestStarter","TextDisplay"],displayingText:["Test Start",30,1,0,-30]}) //这是一个TestStarter障碍物
+
+
+    SpawnEntities({ClassType:"unMovableEntity",x:100000,y:700,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["TestStarter","TextDisplay"],displayingText:["PeasWave",50,1,-100000+500,-30]}) //BYD TextDisplayer 你说你的x坐标是多少？
+    SpawnEntities({ClassType:"unMovableEntity",x:100000,y:700,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["TestStarter","TextDisplay"],displayingText:["Test",25,1,-100000+657,-20]})
+    SpawnEntities({ClassType:"unMovableEntity",x:100000,y:700,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["TestStarter","TextDisplay"],displayingText:["By LoserXxh",30,1,-100000+500,15]})
+
+
+    
+    function TestSpawner() {
+      for (var i = 0; i < 180; i++) {
+        SpawnEntities({ClassType:"peasEnemy",x:Math.random()*-15000,y:-5000+Math.random()*10000,shape:0,color:"#ce4040",borderColor:"#b82828",r:12,speed:8,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:5,team:2,AI:"Chase",searchRadius:840,damage:10,maxHealth:50}) //这是一个AI为追逐的敌人
+      };
+      for (var i = 0; i < 120; i++) {
+        SpawnEntities({ClassType:"peasEnemy",x:1000+Math.random()*15000,y:-5000+Math.random()*10000,shape:1,color:"#e67747",borderColor:"#cc6133",r:12,speed:8,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:5,team:2,AI:["Close","UseWeapon"],searchRadius:840,damage:5,maxHealth:25,weapon:EnemyWeaponBasic}) //这是一个AI为远程射击的Basic敌人
+      };
+
+      SpawnEntities({ClassType:"peasEnemy",x:-1000,y:-500+Math.random()*1000,shape:3,color:"#ce4040",borderColor:"#b82828",r:60,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.1,team:2,AI:["Chase"],searchRadius:1200,damage:15,maxHealth:1000,mass:30}) //小Penta
+      SpawnEntities({ClassType:"peasEnemy",x:-5000,y:-500+Math.random()*1000,shape:3,color:"#ce4040",borderColor:"#b82828",r:60,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.1,team:2,AI:["Chase"],searchRadius:1200,damage:15,maxHealth:1000,mass:30}) //小Penta
+      
+
+      SpawnEntities({ClassType:"peasEnemy",x:-3000,y:-500+Math.random()*1000,shape:3,color:"#ce4040",borderColor:"#b82828",r:120,speed:2,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.1,team:2,AI:["Chase"],searchRadius:1200,damage:20,maxHealth:1500,mass:80}) //Penta
+
+      SpawnEntities({ClassType:"peasEnemy",x:-4000,y:-1000+Math.random()*2000,shape:1,color:"#e67747",borderColor:"#cc6133",r:30,speed:6,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.2,team:2,AI:["Close","UseWeapon"],searchRadius:1200,damage:5,maxHealth:500,mass:30,weapon:EnemyWeaponPentaShot}) //PentaShot
+      SpawnEntities({ClassType:"peasEnemy",x:-10000,y:-1000+Math.random()*2000,shape:1,color:"#e67747",borderColor:"#cc6133",r:30,speed:6,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.2,team:2,AI:["Close","UseWeapon"],searchRadius:1200,damage:5,maxHealth:500,mass:30,weapon:EnemyWeaponPentaShot}) //PentaShot
+
+      SpawnEntities({ClassType:"peasEnemy",x:-1000,y:500,shape:2,color:"#f8e37c",borderColor:"#dfc95d",r:50,speed:3,accSpeed:0.1,decSpeed:0.9,beCollided:normalCollision,extraKnockback:0.2,team:2,AI:["Close","UseWeapon"],searchRadius:800,damage:5,maxHealth:800,mass:30,weapon:EnemyFastSummoner}) //Summoner
+    }
+
+    //*/
+
+    //*//Wave房间
+    DebugDrawing = false;
+    canvas.width = 1000;
+    canvas.height = 1000;
+    SpawnEntities({ClassType:"unMovableEntity",x:500,y:300,shape:0,color:"#fff261",borderColor:"#ede05a",r:12,extraKnockback:5,team:1,AI:["WaveStarter"]}) //这是一个WaveStarter
+
+    SpawnEntities({ClassType:"peasPlayer",x:500,y:1080,shape:0,color:"#50a654",borderColor:"#428545",r:12,speed:8,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1,damage:10,maxHealth:100,heal:10,weapon:startWeapon,vectorY:-105}) //这是一个Basic玩家
+
+    SpawnEntities({ClassType:"unMovableEntity",x:50,y:700,shape:0,color:"#6699cc",borderColor:"#4e82b7",r:12,extraKnockback:5,team:1,AI:["Changelog"]}) //这是一个Changelog
+    //*/
+
+
+    /*//场景byd(?何意味 //默认颜色：玩家绿{color:"#50a654",borderColor:"#428545"},红{color:"#ce4040",borderColor:"#b82828"},橙{color:"#e67747",borderColor:"#d86a3b"},黄{color:"#f8e37c",borderColor:"#dfc95d"},特殊色{color:"#fff261",borderColor:"#ede05a"}
+
+    SpawnEntities({ClassType:"peasPlayer",x:320,y:-180,shape:0,color:"#50a654",borderColor:"#428545",r:60,speed:15,accSpeed:0.15,decSpeed:0.85,beCollided:playerCollision,extraKnockback:0,team:1,mass:1,AI:["controlEntityRotation"]}) //角度调整的
+
+    SpawnEntities({ClassType:"unMovableEntity",x:310,y:160,shape:1,color:"#e67747",borderColor:"#d86a3b",r:10,team:0,extraKnockback:0})//三角
+    SpawnEntities({ClassType:"unMovableEntity",x:300,y:190,shape:2,color:"#f8e37c",borderColor:"#dfc95d",r:10,team:0,extraKnockback:0})//正方
+    SpawnEntities({ClassType:"unMovableEntity",x:340,y:170,shape:4,color:"#f8e37c",borderColor:"#dfc95d",r:10,team:0,extraKnockback:0})//六边
+    SpawnEntities({ClassType:"unMovableEntity",x:330,y:200,shape:0,color:"#ce4040",borderColor:"#b82828",r:10,team:0,extraKnockback:0})//圆
+
+    SpawnEntities({ClassType:"unMovableEntity",x:320,y:180,shape:0,color:"#50a654",borderColor:"#428545",r:12,team:0,extraKnockback:0})//绿圆
+
+
+    //*/
+
+
+
+    const WaveControlSystem = new WaveController()
+    const PlayerLevelSystem = new PlayerLevel()
+
+
+
+    let lastTime = 0;
+    const targetFps = 60; // 目标帧率（真60帧）
+    const targetDelta = 1000 / targetFps; // 目标帧间隔（毫秒
+    let gameTimer = 0; //碰撞计时器
+
+    function GameLoop(currentTime) {            
+      // 计算时间差（毫秒）
+      const deltaTime = currentTime - lastTime || 0;
+      // 限制最大时间差（避免页面卡顿时突然加速效果）
+      const clampedDelta = Math.min(deltaTime, targetDelta * 2);
+      // 计算时间缩放因子（相对于目标帧率的比例）
+      const timeScale = clampedDelta / targetDelta;
+
+      settlementMoves(); //按键检测
+
+      //碰撞计时器+
+      gameTimer += clampedDelta;
+      
+      //达到目标帧间隔时进行
+      if (gameTimer >= targetDelta) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        handleCollisions(); //碰撞处理
+        runEntities(timeScale); //执行实体AI
+        entitiesHealing(); //实体回血
+        gameTimer -= targetDelta; //减去一个目标间隔时间
+        deleteDeathEntity();
+      };
+      WaveControlSystem.WaveControl(); //hm..wave控制应该放在关于帧之外吗？
+      PlayerLevelSystem.LevelSystem(); //玩家等级系统
+      debugDraw();
+      drawEntityData();
+
+      lastTime = currentTime;
+      requestAnimationFrame(GameLoop);
+    }
+
+    requestAnimationFrame(GameLoop);
+
+    //db教的适配屏幕，这是什么？“缩小算法”!（什
+    // 保存canvas的原始实际尺寸（逻辑基于这个尺寸）
+    const originalCanvasWidth = canvas.width;  // 原始宽度（比如640）
+    const originalCanvasHeight = canvas.height;  // 原始高度（比如360）
+
+    // 调整canvas的显示尺寸（只改视觉大小，不改实际绘图尺寸）
+    function resizeCanvasDisplay() {
+      // 获取当前窗口可用尺寸
+      const windowBlank = 80;//canvas边边留白，比较好看（？
+      const windowWidth = window.innerWidth - windowBlank;
+      const windowHeight = window.innerHeight - windowBlank;
+
+      const minLength = 80;  // 最小canvas边长限制（像素值）
+
+      // 计算宽高方向的缩放比例（窗口尺寸 / 原始canvas尺寸，不放大）
+      const scaleX = Math.min(windowWidth / originalCanvasWidth, 1);
+      const scaleY = Math.min(windowHeight / originalCanvasHeight, 1);
+      let scale = Math.min(scaleX, scaleY);
+
+      // 计算确保宽高不小于最小长度的缩放比例
+      const minScaleForWidth = minLength / originalCanvasWidth;
+      const minScaleForHeight = minLength / originalCanvasHeight;
+      const minRequiredScale = Math.max(minScaleForWidth, minScaleForHeight);
+
+      // 确保缩放比例：不超过1（不放大），且不小于最小边长要求
+      scale = Math.max(scale, minRequiredScale);
+
+      // 只在窗口尺寸小于原始canvas时缩小，否则保持原始显示尺寸
+      const displayWidth = originalCanvasWidth * scale;
+      const displayHeight = originalCanvasHeight * scale;
+
+      // 通过CSS设置显示尺寸（不修改canvas的实际width/height）
+      canvas.style.width = `${displayWidth}px`;
+      canvas.style.height = `${displayHeight}px`;
+    }
+
+    // 初始化时执行一次，确保显示正确
+    resizeCanvasDisplay();
+
+    // 监听窗口大小变化，实时调整显示尺寸
+    window.addEventListener('resize', resizeCanvasDisplay);
+  </script>
+</body>
+</html>
